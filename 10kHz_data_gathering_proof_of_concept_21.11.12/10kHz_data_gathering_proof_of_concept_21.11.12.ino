@@ -1,10 +1,18 @@
 #include "SPI.h"
+//int led=13;
+//int adc_cs=46;
+//int dac_cs=22;
+//int busy=48;
+//int reset=50;
+//int convst=52;
+
 int led=13;
-int adc_cs=46;
-int dac_cs=22;
-int busy=48;
-int reset=50;
-int convst=52;
+int adc_cs=10;
+int dac_cs=36;
+int busy=32;
+int reset=31;
+int convst=30;
+
 long fft[50000];
 byte buf[200000];
 
