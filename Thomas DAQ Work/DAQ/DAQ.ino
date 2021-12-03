@@ -31,7 +31,7 @@ AD7606 adc;
 #define ADC_BSY 32
 #define ADC_CONVST 30
 
-#define LED 13
+#define LED 33
 
 //buffer size for ADC converstions
 #define BUFFERSIZE 2
@@ -39,17 +39,52 @@ AD7606 adc;
 volatile uint8_t adc_data[4][BUFFERSIZE];
 int adc_response;
 
+long fft[50000];
+byte buf[200000];
+
 void setup() {    
     //begin serial communication with a BAUD rate of 115200
-    Serial.begin(115200);
+    Serial.begin(250000);
 
     //setup the DAC (see the AD5764 library for details)
     dac.SetupAD5764(DAC_CS, DAC_LDAC, DAC_CLR);
     //setup the ADC (see the AD7606 library for details)
-    adc.SetupAD7606(ADC_CS, ADC_RDY, ADC_RST, ADC_BSY, ADC_CONVST);
+    adc.SetupAD7606(ADC_CS, ADC_RST, ADC_BSY, ADC_CONVST);
 
     //setup LED pin for output
-    //pinMode(LED, OUTPUT);
+    pinMode(LED, OUTPUT);
+
+    digitalWrite(LED, HIGH);
+
+    // Take 5 seconds of ADC measurements at 10 kHz and
+    // output over serial. This tests whether the libraries
+    // are working properly.
+    long output;
+    unsigned long cputime, cputime2,wait;
+    wait = 0;
+    cputime2 = micros();
+    for (int i = 0;i < 50000;i++){
+        while(wait>micros()){}
+        cputime = micros();
+        wait = cputime+99;
+        adc.StartConversion();
+        delayMicroseconds(5);
+        fft[i] = adc.GetConversionData();
+    }
+    cputime = micros();
+    fftToBuf();
+    Serial.write(buf,40000);
+    Serial.println(micros()-cputime);
+    digitalWrite(LED, LOW);
+}
+
+void fftToBuf(){
+  for (int i = 0;i < 10000;i++){
+    buf[i*4]=((fft[i]>>24)&0xFF);
+    buf[i*4+1]=((fft[i]>>16)&0xFF);
+    buf[i*4+2]=((fft[i]>>8)&0xFF);
+    buf[i*4+3]=(fft[i]&0xFF);
+  }
 }
 
 void loop() {
@@ -58,15 +93,16 @@ void loop() {
     //if Serial.available() % 16 != 0 after a communication is completed, then the Arduino will not process
     //the bitstream properly, the fastest way to fix this is a restart, the input stream can also be flushed with data
     //until Serial.available() % 16 == 0.
+
     
     if (Serial.available() >= 16) {
         //read 16 bytes of serial data into a data buffer
-        uint8_t data[16];
+        char data[16];
         Serial.readBytes(data, 16);
 
         //get function code (upper 4 bits from first data byte)
-        uint8_t fnc = data[0] >> 4;
-        byte adc_data[2];
+        char fnc = data[0] >> 4;
+        byte adc_data[3];
         byte somedata[] = {1, 15, 9};
 
         //branch based on function code 
