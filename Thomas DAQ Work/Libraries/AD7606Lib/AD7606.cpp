@@ -3,22 +3,22 @@
 #include "AD7606.h"
 
 //ADC symbols
-//All tables & pages reference AD7734 Data Sheet Rev B (4 Channels, AD7732 is 2 Channels)
+//All pages reference AD7606C-18 Data Sheet Rev A
 //Communications Register, Table 11 Summery
 
-//Read/Write bit (R, W), Table 11
+//Read/Write bit, pg. 48
 #define READ  1 << 6
 #define WRITE 0 << 6
 
-//ADC register addresses, Table 11
-#define ADDR_COM                      0x0
-#define ADDR_IO                       0x1
-#define ADDR_REVISION                 0x2
-#define ADDR_TEST                     0x3
-#define ADDR_ADCSTATUS                0x4
-#define ADDR_CHECKSUM                 0x5
-#define ADDR_ADCZEROSCALECAL          0x6
-#define ADDR_ADCFULLSCALE             0x7
+//First few ADC register addresses, table 31
+#define ADDR_STATUS                   0x01
+#define ADDR_CONFIG                   0x02
+#define ADDR_RANGECH1CH2              0x03
+#define ADDR_RANGECH3CH4              0x04
+#define ADDR_RANGECH5CH6              0x05
+#define ADDR_RANGECH7CH8              0x06
+#define ADDR_BANDWIDTH                0x07
+#define ADDR_OVERSAMPLING             0x08
 
 //Address macro functions, returns address for desired register of selected channel (0-3), Table 11
 #define ADDR_CHANNELDATA(adc_channel)   (0x8 + adc_channel)
@@ -28,6 +28,12 @@
 #define ADDR_CHANNELSETUP(adc_channel)(0x28 + adc_channel)
 #define ADDR_CHANNELCONVERSIONTIME(adc_channel)(0x30 + adc_channel)
 #define ADDR_MODE(adc_channel) (0x38 + adc_channel)
+
+// Dout format: number of lines used for clocking out data via SPI
+#define DOUTX1      0 << 3
+#define DOUTX2      1 << 3
+#define DOUTX4      2 << 3
+#define DOUTX8      3 << 3
 
 //Operational Mode Register, Table 12
 //mode bits (MD2, MD1, MD0 bits)
@@ -55,6 +61,9 @@ void AD7606::SetupAD7606(int cs, int rst, int busy, int convst) {
     _rst = rst;
     _busy = busy;
     _convst = convst;
+    
+    // Initial configuration
+    status_header = ext_os_clock = dout_format = operation_mode = 0;
     
 	adc_settings = SPISettings(60000000, MSBFIRST, SPI_MODE2);
     
@@ -85,26 +94,24 @@ void AD7606::SetupAD7606(int cs, int rst, int busy, int convst) {
     // Set data output to all data lines. This will result
     // in 1 channel per data line instead of multiple channels
     // on the same data line.
-    SPI.beginTransaction(adc_settings);
-    digitalWrite(_cs, LOW);
-    SPI.transfer(0x02);
-    SPI.transfer(0x18);
-    digitalWrite(_cs, HIGH);
-    SPI.endTransaction();
+    dout_format = DOUTX8;
+    UpdateConfiguration();
     
     // Wait for board to finish initializing
     delayMicroseconds(100);
 }
 
 
-// Not sure we need this method so I commented out everything inside.
-void AD7606::ChannelSetup(int adc_channel, uint8_t flags) {
-    // uint8_t data_array[2];
-
-    // data_array[0] = WRITE | ADDR_CHANNELSETUP(adc_channel);
-    // data_array[1] = flags;
-
-    // SPI.transfer(data_array, 2);
+// Update the configuration register
+void AD7606::UpdateConfiguration() {
+    uint8_t config_data = status_header | ext_os_clock | dout_format | operation_mode;
+    
+    SPI.beginTransaction(adc_settings);
+    digitalWrite(_cs, LOW);
+    SPI.transfer(ADDR_CONFIG);
+    SPI.transfer(config_data);
+    digitalWrite(_cs, HIGH);
+    SPI.endTransaction();
 }
 
 //tells the ADC to start a conversion
@@ -121,8 +128,6 @@ int AD7606::GetConversionData() {
     uint8_t data_array, upper, middle, lower;
     
     SPI.beginTransaction(adc_settings);
-    
-    // Not sure why we do this...
     digitalWrite(_cs, LOW);
 
     //read bytes of channel data register (16 bit mode)
@@ -130,9 +135,7 @@ int AD7606::GetConversionData() {
     middle = SPI.transfer(0);
     lower = SPI.transfer(0);
     
-    // Not sure why we do this either...
     digitalWrite(_cs, HIGH);
-
     SPI.endTransaction();
 
     // Convert

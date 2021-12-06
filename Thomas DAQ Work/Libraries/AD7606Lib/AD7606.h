@@ -28,6 +28,8 @@ class AD7606 {
 
 
     void ChannelSetup(int adc_channel, uint8_t flags);
+    
+    void UpdateConfiguration();
 
     // Start a conversion
     void StartConversion();
@@ -36,7 +38,8 @@ class AD7606 {
     int GetConversionData();
 
     private:
-    int _cs, _rdy, _rst, _busy, _convst;
+    int _cs, _rst, _busy, _convst;
+    uint8_t status_header, ext_os_clock, dout_format, operation_mode;
     
     SPISettings adc_settings;
 	
