@@ -41,7 +41,7 @@ int adc_response;
 
 long fft[50000];
 byte buf[200000];
-
+bool LEDState = false;
 
 void setup() {    
     //begin serial communication with a BAUD rate of 115200
@@ -56,6 +56,7 @@ void setup() {
     pinMode(LED, OUTPUT);
 
     digitalWrite(LED, HIGH);
+    LEDState = true;
 
     // Take 5 seconds of ADC measurements at 10 kHz and
     // output over serial. This tests whether the libraries
@@ -76,7 +77,8 @@ void setup() {
     fftToBuf();
     Serial.write(buf,40000);
     Serial.println(micros()-cputime);
-    digitalWrite(LED, LOW);
+
+    LEDToggle();
 }
 
 void fftToBuf(){
@@ -88,6 +90,34 @@ void fftToBuf(){
   }
 }
 
+void LEDToggle() {
+  LEDState = !LEDState;
+  if (LEDState) {
+    digitalWrite(LED, HIGH);
+  } else {
+    digitalWrite(LED, LOW);
+  }
+}
+
+
+// Start an ADC conversion, get the data, and send it to host over USB serial
+void GetADCReading() {
+    adc.StartConversion();
+    LEDToggle();
+    delayMicroseconds(100);
+    adc_response = adc.GetConversionData();
+    
+    
+    byte adc_data[3];
+    adc_data[0] = (adc_response >> 16)&0xFF;
+    adc_data[1] = (adc_response >> 8)&0xFF;
+    adc_data[2] = (adc_response)&0xFF;
+    Serial.write(adc_data, 3);
+}
+
+
+
+
 void loop() {
     //wait for a valid 16 byte data stream to become available
 
@@ -98,39 +128,29 @@ void loop() {
     
     if (Serial.available() >= 16) {
         //read 16 bytes of serial data into a data buffer
-        char data[16];
+        byte data[16];
         Serial.readBytes(data, 16);
 
         //get function code (upper 4 bits from first data byte)
         char fnc = data[0] >> 4;
-        byte adc_data[3];
-        byte somedata[] = {1, 15, 9};
 
         //branch based on function code 
         switch (fnc) {
             case 0:
-                //digitalWrite(LED, HIGH);
+                LEDToggle();
                 //change the voltage on the passed DAC channel to the passed voltage 
                 dac.SetDataRegister((data[1] << 8) | data[2], (data[0] >> 2) & 0x3);
             break;
 
             case 1:
-                //begin ADC conversion on the passed channels 
+                //begin ADC conversion
                 adc.StartConversion();
                 delayMicroseconds(100);
                 adc_response = adc.GetConversionData();
             break;
 
             case 2:
-                //digitalWrite(LED, LOW);
-                //write back the requested ADC conversion data 
-//                Serial.write((uint8_t*)(adc_data[data[0] & 0x3]), 2);
-
-                adc_data[0] = (adc_response >> 16)&0xFF;
-                adc_data[1] = (adc_response >> 8)&0xFF;
-                adc_data[2] = (adc_response)&0xFF;
-//                Serial.write(adc_data, 3);
-                Serial.write(adc_data, 3);
+                GetADCReading();
             default:
             break;
         }
