@@ -58,27 +58,7 @@ void setup() {
     digitalWrite(LED, HIGH);
     LEDState = true;
 
-    // Take 5 seconds of ADC measurements at 10 kHz and
-    // output over serial. This tests whether the libraries
-    // are working properly.
-    long output;
-    unsigned long cputime, cputime2,wait;
-    wait = 0;
-    cputime2 = micros();
-    for (int i = 0;i < 50000;i++){
-        while(wait>micros()){}
-        cputime = micros();
-        wait = cputime+99;
-        adc.StartConversion();
-        delayMicroseconds(5);
-        fft[i] = adc.GetConversionData();
-    }
-    cputime = micros();
-    fftToBuf();
-    Serial.write(buf,40000);
-    Serial.println(micros()-cputime);
-
-    LEDToggle();
+    adc.DiagnosticEnable();
 }
 
 void fftToBuf(){
@@ -103,8 +83,7 @@ void LEDToggle() {
 // Start an ADC conversion, get the data, and send it to host over USB serial
 void GetADCReading() {
     adc.StartConversion();
-    LEDToggle();
-    delayMicroseconds(100);
+    delayMicroseconds(1000);
     adc_response = adc.GetConversionData();
     
     
@@ -112,6 +91,8 @@ void GetADCReading() {
     adc_data[0] = (adc_response >> 16)&0xFF;
     adc_data[1] = (adc_response >> 8)&0xFF;
     adc_data[2] = (adc_response)&0xFF;
+
+    byte otherdata[3] = {0xFB, 0xAD, 0x0A};
     Serial.write(adc_data, 3);
 }
 
@@ -128,7 +109,7 @@ void loop() {
     
     if (Serial.available() >= 16) {
         //read 16 bytes of serial data into a data buffer
-        byte data[16];
+        char data[16];
         Serial.readBytes(data, 16);
 
         //get function code (upper 4 bits from first data byte)
@@ -139,7 +120,7 @@ void loop() {
             case 0:
                 LEDToggle();
                 //change the voltage on the passed DAC channel to the passed voltage 
-                dac.SetDataRegister((data[1] << 8) | data[2], (data[0] >> 2) & 0x3);
+                dac.SetDataRegister((data[1] << 8) | data[2], data[0] & 0x7);
             break;
 
             case 1:
@@ -150,6 +131,7 @@ void loop() {
             break;
 
             case 2:
+                LEDToggle();
                 GetADCReading();
             default:
             break;

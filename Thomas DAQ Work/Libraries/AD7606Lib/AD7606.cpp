@@ -35,16 +35,6 @@
 #define DOUTX4      2 << 3
 #define DOUTX8      3 << 3
 
-//Operational Mode Register, Table 12
-//mode bits (MD2, MD1, MD0 bits)
-#define IDLE_MODE                   0 << 5
-#define CONT_CONV_MODE              1 << 5
-#define SINGLE_CONV_MODE            2 << 5
-#define PWR_DOWN_MODE               3 << 5
-#define ZERO_SCALE_SELF_CAL_MODE    4 << 5
-#define CH_ZERO_SCALE_SYS_CAL_MODE  6 << 5
-#define CH_FULL_SCALE_SYS_CAL_MODE  7 << 5
-#define CH_EN_CONT_CONV             1 << 3
 
 //resolution for 16 bit mode operation, the ADC supports 16 or 24 bit resolution.
 #define ADCRES16 65535.0
@@ -64,6 +54,9 @@ void AD7606::SetupAD7606(int cs, int rst, int busy, int convst) {
     
     // Initial configuration
     status_header = ext_os_clock = dout_format = operation_mode = 0;
+    
+    // Keep track of what mode we're in right now. Default: ADC mode
+    ADCMode = true;
     
 	adc_settings = SPISettings(60000000, MSBFIRST, SPI_MODE2);
     
@@ -101,9 +94,49 @@ void AD7606::SetupAD7606(int cs, int rst, int busy, int convst) {
     delayMicroseconds(100);
 }
 
+// Enables register mode by sending a read command
+void AD7606::RegisterModeEnable() {
+    ADCMode = false;
+    // To enter register mode, we send a read command. The second byte is ignored.
+    uint8_t data[2] = {READ | ADDR_CONFIG, 0}; 
+    
+    SPI.beginTransaction(adc_settings);
+    digitalWrite(_cs, LOW);
+    SPI.transfer(data, 2);
+    digitalWrite(_cs, HIGH);
+    SPI.endTransaction();
+}
+
+// Enables ADC mode by sending 2 bytes of zeros
+void AD7606::ADCModeEnable() {
+    ADCMode = true;
+    uint8_t data[2] = {0, 0}; // Initialize a buffer of zeros
+    
+    // Send 2 bytes of zeros
+    SPI.beginTransaction(adc_settings);
+    digitalWrite(_cs, LOW);
+    SPI.transfer(data, 2);
+    digitalWrite(_cs, HIGH);
+    SPI.endTransaction();
+}
+
+void AD7606::DiagnosticEnable() {
+    if (ADCMode) {
+        ADCModeEnable();
+    }
+    uint8_t data[2] = {WRITE | 0x21, 1 << 7};
+    SPI.beginTransaction(adc_settings);
+    digitalWrite(_cs, LOW);
+    SPI.transfer(data, 2);
+    digitalWrite(_cs, HIGH);
+    SPI.endTransaction();
+}
 
 // Update the configuration register
 void AD7606::UpdateConfiguration() {
+    if (ADCMode) {
+        RegisterModeEnable();
+    }
     uint8_t config_data = status_header | ext_os_clock | dout_format | operation_mode;
     
     SPI.beginTransaction(adc_settings);
@@ -124,22 +157,26 @@ void AD7606::StartConversion() {
 }
 
 
-int AD7606::GetConversionData() {
-    uint8_t data_array, upper, middle, lower;
+uint32_t AD7606::GetConversionData() {
+    if (!ADCMode) {
+        ADCModeEnable();
+    }
+    uint8_t upper = 0xAF, middle = 0x0A, lower = 0xF0; // Values for testing
     
     SPI.beginTransaction(adc_settings);
     digitalWrite(_cs, LOW);
 
-    //read bytes of channel data register (16 bit mode)
+    //read result
     upper = SPI.transfer(0);
     middle = SPI.transfer(0);
     lower = SPI.transfer(0);
+    
     
     digitalWrite(_cs, HIGH);
     SPI.endTransaction();
 
     // Convert
-    int result = ((upper&0xff)<<10 | (middle&0xff) << 2 | (lower&0xff) >> 6);
+    uint32_t result = ((upper&0xff)<<16 | (middle&0xff) << 8 | (lower&0xff));
     
     return result;
 }

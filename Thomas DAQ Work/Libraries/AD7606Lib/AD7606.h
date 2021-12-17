@@ -33,13 +33,22 @@ class AD7606 {
 
     // Start a conversion
     void StartConversion();
+    
+    
+    void DiagnosticEnable();
 
     //request channel data from the ADC
-    int GetConversionData();
+    uint32_t GetConversionData();
+    
 
     private:
     int _cs, _rst, _busy, _convst;
     uint8_t status_header, ext_os_clock, dout_format, operation_mode;
+    bool ADCMode;
+    
+    void RegisterModeEnable();
+    void ADCModeEnable();
+    
     
     SPISettings adc_settings;
 	
