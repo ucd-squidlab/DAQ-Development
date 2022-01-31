@@ -58,7 +58,7 @@ void AD7606::SetupAD7606(int cs, int rst, int busy, int convst) {
     // Keep track of what mode we're in right now. Default: ADC mode
     ADCMode = true;
     
-	adc_settings = SPISettings(6000000, MSBFIRST, SPI_MODE3);
+	adc_settings = SPISettings(6000000, MSBFIRST, SPI_MODE2);
     
 
     
