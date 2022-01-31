@@ -1,11 +1,14 @@
 
-delete(serport)
+
 serport = serialport("COM7", 9600);
 
 command = 2;
 
+voltage = 1
+
 data = uint16(3276.8*(voltage + 10));
 send_data = zeros(1, 16, 'uint8');
+
 send_data(1) = bitshift(command, 4);
 write(serport, send_data, "uint8");
 
@@ -29,6 +32,10 @@ if bitand(data(1),0x80) ~= 0
 end
 
 binStr = dec2bin(val, 18);
+
+val2 = bitshift(data(1),16) ...
+       + bitshift(data(2),8) + bitshift(data(3),0);
+binStr2 = dec2bin(val2);
 
 dec2hex(bitshift(val, 0))
 

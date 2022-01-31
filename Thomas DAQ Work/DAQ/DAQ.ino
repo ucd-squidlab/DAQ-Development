@@ -133,6 +133,13 @@ void loop() {
             case 2:
                 LEDToggle();
                 GetADCReading();
+            break;
+
+            case 3:
+              LEDToggle();
+              adc.DiagnosticEnable();
+            break;
+            
             default:
             break;
         }

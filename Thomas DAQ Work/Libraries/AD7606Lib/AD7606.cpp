@@ -58,11 +58,9 @@ void AD7606::SetupAD7606(int cs, int rst, int busy, int convst) {
     // Keep track of what mode we're in right now. Default: ADC mode
     ADCMode = true;
     
-	adc_settings = SPISettings(60000000, MSBFIRST, SPI_MODE2);
+	adc_settings = SPISettings(6000000, MSBFIRST, SPI_MODE3);
     
 
-    //being SPI communication on the ADC chip select
-    SPI.begin();
     
     //set bit order for ADC
     // SPI.setBitOrder(_cs, MSBFIRST);
@@ -79,10 +77,16 @@ void AD7606::SetupAD7606(int cs, int rst, int busy, int convst) {
     pinMode(_rst, OUTPUT);
     pinMode(_cs, OUTPUT);
 
-
+    
+    // digitalWrite(_cs, HIGH);
     digitalWrite(_rst, HIGH);
     digitalWrite(_rst, LOW);
+    
     delayMicroseconds(100);
+    
+    //begin SPI communication
+    SPI.begin();
+    digitalWrite(_cs, HIGH);
     
     // Set data output to all data lines. This will result
     // in 1 channel per data line instead of multiple channels
@@ -104,6 +108,7 @@ void AD7606::RegisterModeEnable() {
     digitalWrite(_cs, LOW);
     SPI.transfer(data, 2);
     digitalWrite(_cs, HIGH);
+    
     SPI.endTransaction();
 }
 
@@ -122,14 +127,18 @@ void AD7606::ADCModeEnable() {
 
 void AD7606::DiagnosticEnable() {
     if (ADCMode) {
-        ADCModeEnable();
+        RegisterModeEnable();
     }
+    // Register: 0x21
+    // Bit 7 is for interface check
     uint8_t data[2] = {WRITE | 0x21, 1 << 7};
     SPI.beginTransaction(adc_settings);
     digitalWrite(_cs, LOW);
     SPI.transfer(data, 2);
     digitalWrite(_cs, HIGH);
     SPI.endTransaction();
+    
+    ADCModeEnable();
 }
 
 // Update the configuration register
