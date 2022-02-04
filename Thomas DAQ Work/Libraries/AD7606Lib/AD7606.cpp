@@ -58,6 +58,8 @@ void AD7606::SetupAD7606(int cs, int rst, int busy, int convst) {
     // Keep track of what mode we're in right now. Default: ADC mode
     ADCMode = true;
     
+    diagnosticMode = false;
+    
 	adc_settings = SPISettings(6000000, MSBFIRST, SPI_MODE2);
     
 
@@ -125,13 +127,21 @@ void AD7606::ADCModeEnable() {
     SPI.endTransaction();
 }
 
-void AD7606::DiagnosticEnable() {
+void AD7606::InterfaceCheckMode(bool enable) {
     if (ADCMode) {
         RegisterModeEnable();
     }
-    // Register: 0x21
+    
     // Bit 7 is for interface check
-    uint8_t data[2] = {WRITE | 0x21, 1 << 7};
+    // 1 = enable, 0 = disable
+    uint8_t code = 1 << 7;
+    if (!enable) {
+        code = 0;
+    }
+    
+    // Diagnostic register: 0x21
+    uint8_t data[2] = {WRITE | 0x21, code};
+    
     SPI.beginTransaction(adc_settings);
     digitalWrite(_cs, LOW);
     SPI.transfer(data, 2);

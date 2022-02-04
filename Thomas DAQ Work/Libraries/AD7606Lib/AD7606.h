@@ -35,7 +35,7 @@ class AD7606 {
     void StartConversion();
     
     
-    void DiagnosticEnable();
+    void InterfaceCheckMode(bool enable);
 
     //request channel data from the ADC
     uint32_t GetConversionData();
@@ -45,6 +45,7 @@ class AD7606 {
     int _cs, _rst, _busy, _convst;
     uint8_t status_header, ext_os_clock, dout_format, operation_mode;
     bool ADCMode;
+    bool diagnosticMode;
     
     void RegisterModeEnable();
     void ADCModeEnable();

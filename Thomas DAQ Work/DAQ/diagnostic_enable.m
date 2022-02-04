@@ -1,14 +1,13 @@
 
 serport = serialport("COM7", 9600);
 
-command = 3;
+command = 3; % For interface check
 
-voltage = 1
+enable = 0; % 0 = disable, 1 = enable
 
-data = uint16(3276.8*(voltage + 10));
 send_data = zeros(1, 16, 'uint8');
+send_data(1) = bitor(bitshift(command, 4), enable);
 
-send_data(1) = bitshift(command, 4);
 write(serport, send_data, "uint8");
 
 delete(serport);

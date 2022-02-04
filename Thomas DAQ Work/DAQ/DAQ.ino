@@ -1,4 +1,45 @@
-
+/**
+ * 
+ * 
+ * Serial commands
+ * ---------------
+ * 
+ * Each serial command consists of 16 bytes of data. The first 4
+ * bits contain the command ID. The rest is data.
+ * 
+ * 
+ * 0. Set DAC
+ *    Code: 0
+ *    Data[0], bits 3-0: Channel (0-4)
+ *    Data[1]-Data[2]: Voltage, (-10) to (+10)
+ *    
+ *    Set an output voltage on the given DAC channel.
+ *    Channels range from 0-3. Use 4 to set all channels.
+ * 
+ * 
+ * 1. Begin ADC Conversion
+ *    Code: 1
+ *    
+ *    Trigger an ADC conversion.
+ *    
+ *    
+ * 2. Get ADC Reading
+ *    Code: 2
+ *    
+ *    Trigger an ADC conversion, read the result, and
+ *    return result in 3 bytes over serial. The first 18 bits
+ *    of the result contain the ADC reading.
+ *    
+ *    
+ * 3. Interface Check Diagnostic Mode
+ *    Code: 3
+ *    Data[0], bits 4-0: 1 = enable, 0 = disable
+ *    
+ *    Enables or disables the ADC diagnostic interface check. When
+ *    enabled, ADC conversions return a fixed value. This can be used to
+ *    determine whether the SPI interface is functioning properly.
+ * 
+ */
 //DAC library header
 #include <AD5764.h>
 //ADC library header
@@ -58,7 +99,6 @@ void setup() {
     digitalWrite(LED, HIGH);
     LEDState = true;
 
-    adc.DiagnosticEnable();
 }
 
 void fftToBuf(){
@@ -92,7 +132,7 @@ void GetADCReading() {
     adc_data[1] = (adc_response >> 8)&0xFF;
     adc_data[2] = (adc_response)&0xFF;
 
-    byte otherdata[3] = {0xFB, 0xAD, 0x0A};
+    //byte otherdata[3] = {0xFB, 0xAD, 0x0A}; //debug
     Serial.write(adc_data, 3);
 }
 
@@ -137,7 +177,8 @@ void loop() {
 
             case 3:
               LEDToggle();
-              adc.DiagnosticEnable();
+              bool enable = data[0] & 0xF; // Whether to enable or disable
+              adc.InterfaceCheckMode(enable);
             break;
             
             default:
