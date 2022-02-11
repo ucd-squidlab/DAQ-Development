@@ -2,6 +2,8 @@
 serport = serialport("COM7", 9600);
 voltMax = 10;
 
+gain = 9.9959/9.9988;
+
 % Send command to get an ADC reading
 command = 2;
 send_data = zeros(1, 16, 'uint8');

@@ -36,6 +36,8 @@ class AD7606 {
     
     
     void InterfaceCheckMode(bool enable);
+    void FullReset();
+    void GainCalibration(uint8_t val);
 
     //request channel data from the ADC
     uint32_t GetConversionData();
@@ -49,6 +51,7 @@ class AD7606 {
     
     void RegisterModeEnable();
     void ADCModeEnable();
+    void RegisterWrite(uint8_t reg, uint8_t data);
     
     
     SPISettings adc_settings;

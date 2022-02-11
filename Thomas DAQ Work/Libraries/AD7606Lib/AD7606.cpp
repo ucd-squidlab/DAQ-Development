@@ -19,15 +19,13 @@
 #define ADDR_RANGECH7CH8              0x06
 #define ADDR_BANDWIDTH                0x07
 #define ADDR_OVERSAMPLING             0x08
+#define ADDR_GAINCH1                  0x09
+#define ADDR_GAINCH2                  0x0A
+#define ADDR_GAINCH3                  0x0B
+#define ADDR_GAINCH4                  0x0C
 
-//Address macro functions, returns address for desired register of selected channel (0-3), Table 11
-#define ADDR_CHANNELDATA(adc_channel)   (0x8 + adc_channel)
-#define ADDR_CHANNELZEROSCALECAL(adc_channel) (0x10 + adc_channel)
-#define ADDR_CHANNELFULLSCALECAL(adc_channel) (0x18 + adc_channel)
-#define ADDR_CHANNELSTATUS(adc_channel)(0x20 + adc_channel)
-#define ADDR_CHANNELSETUP(adc_channel)(0x28 + adc_channel)
-#define ADDR_CHANNELCONVERSIONTIME(adc_channel)(0x30 + adc_channel)
-#define ADDR_MODE(adc_channel) (0x38 + adc_channel)
+#define ADDR_GAIN(ch) (0x08+ch)
+
 
 // Dout format: number of lines used for clocking out data via SPI
 #define DOUTX1      0 << 3
@@ -127,6 +125,27 @@ void AD7606::ADCModeEnable() {
     SPI.endTransaction();
 }
 
+void AD7606::FullReset() {
+    digitalWrite(_rst, HIGH);
+    delayMicroseconds(5);
+    digitalWrite(_rst, LOW);
+}
+
+void AD7606::RegisterWrite(uint8_t reg, uint8_t data) {
+    if (ADCMode) {
+        RegisterModeEnable();
+    }
+    
+    SPI.beginTransaction(adc_settings);
+    digitalWrite(_cs, LOW);
+    SPI.transfer(reg);
+    SPI.transfer(data);
+    digitalWrite(_cs, HIGH);
+    SPI.endTransaction();
+    
+    ADCModeEnable();
+}
+
 void AD7606::InterfaceCheckMode(bool enable) {
     if (ADCMode) {
         RegisterModeEnable();
@@ -149,6 +168,12 @@ void AD7606::InterfaceCheckMode(bool enable) {
     SPI.endTransaction();
     
     ADCModeEnable();
+}
+
+void AD7606::GainCalibration(uint8_t val) {
+    val = val & 0x3f;
+    uint8_t reg = ADDR_GAIN(1);
+    RegisterWrite(reg, val);
 }
 
 // Update the configuration register

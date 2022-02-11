@@ -1,7 +1,7 @@
 
 serport = serialport("COM7", 9600);
 
-command = 3; % For interface check
+command = 2; % For interface check
 
 enable = 0; % 0 = disable, 1 = enable
 

@@ -99,6 +99,7 @@ void setup() {
     digitalWrite(LED, HIGH);
     LEDState = true;
 
+    adc.GainCalibration(0x00);
 }
 
 void fftToBuf(){
@@ -155,10 +156,11 @@ void loop() {
         //get function code (upper 4 bits from first data byte)
         char fnc = data[0] >> 4;
 
+        LEDToggle();
+
         //branch based on function code 
         switch (fnc) {
             case 0:
-                LEDToggle();
                 //change the voltage on the passed DAC channel to the passed voltage 
                 dac.SetDataRegister((data[1] << 8) | data[2], data[0] & 0x7);
             break;
@@ -171,14 +173,16 @@ void loop() {
             break;
 
             case 2:
-                LEDToggle();
                 GetADCReading();
             break;
 
             case 3:
-              LEDToggle();
               bool enable = data[0] & 0xF; // Whether to enable or disable
               adc.InterfaceCheckMode(enable);
+            break;
+
+            case 4:
+              adc.FullReset();
             break;
             
             default:
