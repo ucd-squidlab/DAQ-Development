@@ -1,10 +1,12 @@
+clear;
 serport = serialport("COM7", 9600);
 
-command = 4; % Which command
+command = 0; % Which command
 
 data0 = 0;
 data1 = 0;
 
+command = bitand(command, 0xF);
 send_data = zeros(1, 16, 'uint8');
 send_data(1) = bitor(bitshift(command, 4), data0);
 send_data(2) = bitand(data1,0xFF);

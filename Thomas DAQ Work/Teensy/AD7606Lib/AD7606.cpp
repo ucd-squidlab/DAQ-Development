@@ -44,7 +44,7 @@ AD7606::AD7606() { }
 AD7606::~AD7606() { }
 
 //sets up the AD7606 SPI communication and pins 
-void AD7606::SetupAD7606(int cs, int rst, int busy, int convst) {
+void AD7606::SetupAD7606(int cs, int rst, int busy, int convst, int baudrate) {
     _cs = cs;
     _rst = rst;
     _busy = busy;
@@ -58,7 +58,7 @@ void AD7606::SetupAD7606(int cs, int rst, int busy, int convst) {
     
     diagnosticMode = false;
     
-	adc_settings = SPISettings(6000000, MSBFIRST, SPI_MODE2);
+	adc_settings = SPISettings(baudrate, MSBFIRST, SPI_MODE2);
     
 
     
@@ -97,6 +97,8 @@ void AD7606::SetupAD7606(int cs, int rst, int busy, int convst) {
     // Wait for board to finish initializing
     delayMicroseconds(100);
 }
+
+    
 
 // Enables register mode by sending a read command
 void AD7606::RegisterModeEnable() {

@@ -19,7 +19,7 @@ voltage = val/(2^17)*voltMax;
 if (bitand(read_data(1), 0x80) ~= 0)
  voltage = voltage-voltMax*2;
 end
-voltage
+voltage*gain
 
 % Max voltage is represented as 131072
 output = val / 131072 * voltMax;

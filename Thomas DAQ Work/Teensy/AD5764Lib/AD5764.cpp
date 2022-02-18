@@ -72,7 +72,7 @@ void AD5764::SetupAD5764(int cs, int ldac, int clr) {
 //sets the output on the specified DAC channel
 //the data word is a value between 0-65535 in Binary encoding
 
-void AD5764::SetDataRegister(uint16_t vout, int dac_channel) {
+void AD5764::SetDataRegister(uint16_t vout, uint8_t dac_channel) {
 	//generate DAC Input Shift Register Bit Map (24bits), Table 9 with data in binary coding (Table 7)
 	//using following bits to generate map:
 	//WRITE | DATA_REG | DAC_Address | data

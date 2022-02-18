@@ -24,7 +24,7 @@ class AD7606 {
 
     //setup ADC SPI communication and pins used with the AD7606
     //cs: chip select pin, rdy: data ready pin, rst: ADC reset pin 
-    void SetupAD7606(int cs, int rst, int busy, int convst);
+    void SetupAD7606(int cs, int rst, int busy, int convst, int baudrate = 10000000);
 
 
     void ChannelSetup(int adc_channel, uint8_t flags);

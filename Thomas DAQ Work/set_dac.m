@@ -2,7 +2,7 @@
 serport = serialport("COM7", 9600);
 
 dac = 0;
-voltage = 1;
+voltage = -5;
 
 vmax = 10;
 

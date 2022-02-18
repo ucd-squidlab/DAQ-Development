@@ -2,6 +2,7 @@ import serial
 import struct
 import matplotlib
 import matplotlib.pyplot as plt
+import time
 
 should_close = False
 ser = serial.Serial()
@@ -11,10 +12,12 @@ def Quit(args):
     should_close = True
 
 def Help(args):
-    print("\nAll commands are listed below:\n")
+    print("\nCommands are listed below:\n")
     print("setdac dac_channel voltage")
     print("startadc adc_channel")
     print("getadc adc_channel")
+    print("readadc adc_channel")
+    print("quit")
 
 #bit map:
 #   function    dac_channel     adc_channel     DATA
@@ -28,10 +31,10 @@ def Float2Binary(f):
 def Twos2Float(i):
     
     RES = 18 # Bit depth of the ADC
-    FSR = 20.0 #full scale range, can take 4 different values
-    
+    FSR = 20.0 #full scale voltage range, can take 4 different values
+
     val = (i >> (24-RES))/(2**RES)*FSR
-    if (i & (1<<24) == 1):
+    if (i & (1<<23) > 0):
         val -= FSR
     return val
 
@@ -82,24 +85,39 @@ def GetADCResults(args):
     ser.write(bytearray([2 << 4 | int(args[1])]))
     # write 15 bytes of padding
     ser.write(15)
+    time.sleep(0.01)
     print("Getting data... {}".format(ser.in_waiting))
+    
+    starttime = time.time()
+    dt = 0
 
     # assumes all incoming data is ADC data, formats and prints data as floating point numbers to the terminal
-    while ser.in_waiting > 2:
-        buff = ser.read(3)
+    while ser.in_waiting == 0 and dt < 0.01:
+        dt = time.time() - starttime
+        
+    if ser.in_waiting >= 3:
+        buff = ser.read(ser.in_waiting)
         if (len(buff) > 0):
             # data sent from Arduino is MSB first
             print(Twos2Float(buff[0] << 16 | buff[1] << 8 | buff[2]))
 
     return
 
+def ReadADC(args):
+    StartADCConversion(args);
+    GetADCResults(args);
+    
+
 # input dictionary
 input_dictionary = {
     "help" : Help,
     "q"    : Quit,
+    "quit" : Quit,
+    "exit" : Quit,
     "setdac" : SetDACChannel,
     "startadc" : StartADCConversion,
-    "getadc" : GetADCResults
+    "getadc" : GetADCResults,
+    "readadc" : ReadADC
 }
 
 def main():

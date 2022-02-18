@@ -1,5 +1,5 @@
-/**
- * 
+/** Version 22.02.3
+ * (year.month.commit#)
  * 
  * Serial commands
  * ---------------
@@ -14,7 +14,7 @@
  *    Data[1]-Data[2]: Voltage, (-10) to (+10)
  *    
  *    Set an output voltage on the given DAC channel.
- *    Channels range from 0-3. Use 4 to set all channels.
+ *    Channels range from 0-3. Use a value of 4 to set all channels.
  * 
  * 
  * 1. Begin ADC Conversion
@@ -38,6 +38,12 @@
  *    Enables or disables the ADC diagnostic interface check. When
  *    enabled, ADC conversions return a fixed value. This can be used to
  *    determine whether the SPI interface is functioning properly.
+ *    
+ *    
+ * 4. Reset ADC
+ *    Code: 4
+ *    
+ *    Reset the ADC. LED will toggle for half a second.
  * 
  */
 //DAC library header
@@ -60,6 +66,7 @@ AD7606 adc;
 #define DAC_LDAC 6
 //DAC clear pin
 #define DAC_CLR 5
+#define DAC_RES 16
 
 //ADC chips select pin
 #define ADC_CS 10
@@ -68,6 +75,7 @@ AD7606 adc;
 //ADC reset pin 
 //#define ADC_RST 44
 #define ADC_RST 31
+#define ADC_RES 18
 
 #define ADC_BSY 32
 #define ADC_CONVST 30
@@ -84,6 +92,10 @@ long fft[50000];
 byte buf[200000];
 bool LEDState = false;
 
+// How long to change an output voltage, in microseconds per LSB.
+// NOT IMPLEMENTED
+uint16_t DACMinDeltaT[3] = {0, 0, 0};
+
 void setup() {    
     //begin serial communication with a BAUD rate of 115200
     Serial.begin(250000);
@@ -91,7 +103,7 @@ void setup() {
     //setup the DAC (see the AD5764 library for details)
     dac.SetupAD5764(DAC_CS, DAC_LDAC, DAC_CLR);
     //setup the ADC (see the AD7606 library for details)
-    adc.SetupAD7606(ADC_CS, ADC_RST, ADC_BSY, ADC_CONVST);
+    adc.SetupAD7606(ADC_CS, ADC_RST, ADC_BSY, ADC_CONVST, 10000000);
 
     //setup LED pin for output
     pinMode(LED, OUTPUT);
@@ -138,7 +150,9 @@ void GetADCReading() {
 }
 
 
-
+void SetDAC(uint16_t vout, uint8_t channel) {
+    dac.SetDataRegister(vout, channel);
+}
 
 void loop() {
     //wait for a valid 16 byte data stream to become available
@@ -156,37 +170,46 @@ void loop() {
         //get function code (upper 4 bits from first data byte)
         char fnc = data[0] >> 4;
 
-        LEDToggle();
+        bool enable;
 
         //branch based on function code 
-        switch (fnc) {
+        switch (fnc) {                
             case 0:
                 //change the voltage on the passed DAC channel to the passed voltage 
-                dac.SetDataRegister((data[1] << 8) | data[2], data[0] & 0x7);
-            break;
+                SetDAC((data[1] << 8) | data[2], data[0] & 0x7);
+                break;
 
             case 1:
                 //begin ADC conversion
                 adc.StartConversion();
                 delayMicroseconds(100);
                 adc_response = adc.GetConversionData();
-            break;
+                break;
 
             case 2:
+                // Start ADC conversion, get result, send result over serial
                 GetADCReading();
-            break;
+                break;
 
             case 3:
-              bool enable = data[0] & 0xF; // Whether to enable or disable
-              adc.InterfaceCheckMode(enable);
-            break;
+                // Interface check mode
+                enable = data[0] & 0xF; // Whether to enable or disable
+                adc.InterfaceCheckMode(enable);
+                break;
 
             case 4:
-              adc.FullReset();
-            break;
+                // Reset ADC
+                LEDToggle();
+                adc.FullReset();
+                delay(500);
+                LEDToggle();
+                break;
+
+            case 5:
+                break;
             
             default:
-            break;
+                LEDToggle();
         }
     }
 }
