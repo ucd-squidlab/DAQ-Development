@@ -1,4 +1,4 @@
-/** Version 22.02.3
+/** Version 22.02.4
  * (year.month.commit#)
  * 
  * Serial commands
@@ -12,9 +12,13 @@
  *    Code: 0
  *    Data[0], bits 3-0: Channel (0-4)
  *    Data[1]-Data[2]: Voltage, (-10) to (+10)
+ *    Data[3]: Send completion alert (0 = no alert)
  *    
  *    Set an output voltage on the given DAC channel.
  *    Channels range from 0-3. Use a value of 4 to set all channels.
+ *    If byte 3 is nonzero, the Teensy will send a response code after the
+ *    voltage has been updated on the DAC. This is useful if the voltage
+ *    slew rate has been limited. A response code of 0 means success.
  * 
  * 
  * 1. Begin ADC Conversion
@@ -52,6 +56,9 @@
 #include <AD7606.h>
 //Arduino SPI library header
 #include "SPI.h"
+#include <algorithm>
+
+using namespace std;
 
 //instance of the AD5764 class ( DAC )
 AD5764 dac;
@@ -92,11 +99,22 @@ long fft[50000];
 byte buf[200000];
 bool LEDState = false;
 
-// How long to change an output voltage, in microseconds per LSB.
-// NOT IMPLEMENTED
-uint16_t DACMinDeltaT[3] = {0, 0, 0};
+// How long to change an output voltage, in microseconds per step.
+// NOTE: This feature assumes that a value of 0x0000 corresponds
+// to the minimum possible voltage and 0xFFFF corresponds to the
+// maximum voltage. If the DAC library is changed, then
+// the feature may need to be rewritten.
+// *** NOT IMPLEMENTED ***
+uint16_t DACDeltaT[4] = {20, 0, 0, 0};
+// Step size when changing the DAC output voltage, in LSB
+uint8_t DACStepSize = 1;
 
-void setup() {    
+
+// Current state of DAC
+// *** NOT IMPLEMENTED ***
+uint16_t DACVout[4] = {1<<15};
+
+void setup() {
     //begin serial communication with a BAUD rate of 115200
     Serial.begin(250000);
 
@@ -112,6 +130,7 @@ void setup() {
     LEDState = true;
 
     adc.GainCalibration(0x00);
+    SetDAC(1<<15, 4);
 }
 
 void fftToBuf(){
@@ -149,9 +168,49 @@ void GetADCReading() {
     Serial.write(adc_data, 3);
 }
 
+// Set the DAC output on channel `channel` to voltage `vout`
+// where `vout` is encoded assuming that 0x0000 = -10V and
+// 0xFFFF = 10V
+int SetDAC(uint16_t vout, uint8_t channel) {
+  // Get the deltaT for each step
+  uint16_t deltaT;
 
-void SetDAC(uint16_t vout, uint8_t channel) {
+  // Get time delay for each step
+  if (channel == 4) {
+    deltaT = *std::max_element(DACDeltaT, DACDeltaT+4);
+    if (deltaT > 0) {
+      // Abort if there are slew rate restrictions on any channels.
+      return -1;
+    }
+  } else {
+    deltaT = DACDeltaT[channel];
+  }
+
+  // Set voltage
+  if (deltaT == 0) {
+    if (channel == 4) {
+      std::fill(DACVout, DACVout+4, vout);
+    } else {
+      DACVout[channel] = vout;
+    }
     dac.SetDataRegister(vout, channel);
+    
+  } else { // We already made sure only 1 channel is being changed when deltaT>0
+    
+    // Direction (increasing or decreasing voltage)
+    int dir = 2*(vout > DACVout[channel]) - 1; // 1 if increasing, -1 if decreasing
+    bool complete = false;
+    while(!complete) {
+      DACVout[channel] += dir*DACStepSize;
+      if (dir*DACVout[channel] >= dir*vout) {
+        DACVout[channel] = vout;
+        complete = true;
+      }
+      dac.SetDataRegister(DACVout[channel], channel);
+      delayMicroseconds(deltaT);
+    }
+  }
+  return 0;
 }
 
 void loop() {
@@ -164,19 +223,24 @@ void loop() {
     
     if (Serial.available() >= 16) {
         //read 16 bytes of serial data into a data buffer
-        char data[16];
+        unsigned char data[16];
         Serial.readBytes(data, 16);
 
         //get function code (upper 4 bits from first data byte)
-        char fnc = data[0] >> 4;
+        uint8_t fnc = data[0] >> 4;
 
         bool enable;
+        unsigned char response_code;
 
         //branch based on function code 
         switch (fnc) {                
             case 0:
+                response_code = 0;
                 //change the voltage on the passed DAC channel to the passed voltage 
                 SetDAC((data[1] << 8) | data[2], data[0] & 0x7);
+                if (data[3] > 0) {
+                  Serial.write(response_code);
+                }
                 break;
 
             case 1:

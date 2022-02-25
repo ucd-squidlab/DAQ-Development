@@ -29,7 +29,7 @@
 #define CLEAR_DATA  4
 #define LOAD_DATA   5
 
-//DAC Refrence Voltage
+//DAC Reference Voltage
 #define VREFIN 5.0
 
 /***  Current coding expecting voltage preconverted, therefore following isn't being used. ***/
@@ -66,7 +66,7 @@ void AD5764::SetupAD5764(int cs, int ldac, int clr) {
 	digitalWrite(_clr, HIGH);    //not going to clear the DAC, must be driven high
 
 	//place DAC into known state ( 0 on all channels )
-	SetDataRegister(CONVERT_VALUE2DAC(3.5), DAC_ALL);
+	SetDataRegister(CONVERT_VALUE2DAC(0), DAC_ALL);
 }
 
 //sets the output on the specified DAC channel
@@ -83,7 +83,7 @@ void AD5764::SetDataRegister(uint16_t vout, uint8_t dac_channel) {
 	data_array[1] = (vout & 0xFF00) >> 8;
 	data_array[2] = (vout & 0x00FF);
     
-    uint16_t vout_daq = 16384.0 * ((vout/VREFIN) + 2);
+    //uint16_t vout_daq = 16384.0 * ((vout/VREFIN) + 2);
     
     
 	//transfer the data to the DAC

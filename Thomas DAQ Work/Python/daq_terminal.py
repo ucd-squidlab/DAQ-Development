@@ -1,3 +1,5 @@
+# Version 22.02.4
+
 import serial
 import struct
 import matplotlib
@@ -24,10 +26,12 @@ def Help(args):
 #       4           2               2            120
 
 #function for converting a floating point value to a value usable by the DAC
-def Float2Binary(f):
+def Float2DAC(f):
     return int((16384 * ((float(f)/5.0) + 2)))
 
-#function for converting a two's complement number from the ADC to a usable floating point value
+
+# Function for converting a two's complement number from the ADC to a usable
+# floating point value
 def Twos2Float(i):
     
     RES = 18 # Bit depth of the ADC
@@ -50,9 +54,25 @@ def SetDACChannel(args):
 
     #write serial data, forcing MSB first order 
     ser.write(bytearray([0 << 4 | int(args[1]) << 2]))
-    ser.write(struct.pack('>H', Float2Binary(args[2])))
+    ser.write(struct.pack('>H', Float2DAC(args[2])))
     #write 13 bytes of padding
     ser.write(13)
+
+def SetDACVoltage(voltage, channel=4, wait=0):
+    #write serial data, forcing MSB first order
+    ser.write(bytearray([0 << 4 | int(channel) << 2]))
+    ser.write(struct.pack('>H', Float2DAC(voltage)))
+    ser.write(bytearray([1]))
+    #write 12 bytes of padding
+    ser.write(12)
+    response_code = -1
+    if (wait>0):
+        response = WaitForSerial(wait)
+        if (len(response) == 0):
+            return -5;
+        response_code = response[0]
+    return response_code
+    
 
 def StartADCConversion(args):
     #expected arguments: ADC channel(1)
@@ -69,6 +89,37 @@ def StartADCConversion(args):
     #write 15 bytes of padding
     ser.write(15)
 
+# Steps: how many parts to divide the range into. Min: 1
+# A value of 1 will result in a total of two measurements, one at the top
+# and the other at the bottom of the range
+def Ramp(outchannel, inchannel, startV, endV, steps):
+    deltaV = (endV - startV)/steps
+    voltage = startV
+    # Add 1 to to steps so that the ending value is included
+    for i in range(steps+1):
+        voltage = startV + i*deltaV
+        print("Output: {}".format(voltage))
+        success = SetDACVoltage(voltage, channel=outchannel, wait=10)
+        if (success == 0):
+            GetADCResults([0, inchannel])
+        elif (success == -5):
+            print("DAQ Not Responding")
+            return
+        else:
+            print("DAC Error")
+            return
+    return
+
+def WaitForSerial(maxwaittime):
+    starttime = time.time()
+
+    while ser.in_waiting == 0:
+        if time.time() - starttime > maxwaittime:
+            return []
+        
+    buff = ser.read(ser.in_waiting)
+    return buff
+    
 def GetADCResults(args):
     # expected arguments: ADC channel(1)
     
@@ -86,12 +137,13 @@ def GetADCResults(args):
     # write 15 bytes of padding
     ser.write(15)
     time.sleep(0.01)
-    print("Getting data... {}".format(ser.in_waiting))
+    #print("Getting data... {}".format(ser.in_waiting))
     
     starttime = time.time()
     dt = 0
 
-    # assumes all incoming data is ADC data, formats and prints data as floating point numbers to the terminal
+    # Assumes all incoming data is ADC data.
+    # Formats and prints data as floating point numbers to the terminal
     while ser.in_waiting == 0 and dt < 0.01:
         dt = time.time() - starttime
         
@@ -108,6 +160,14 @@ def ReadADC(args):
     GetADCResults(args);
     
 
+def StartRamp(args):
+    if (len(args) < 3):
+        print("Missing arguments.")
+        return
+    print("Ramping... {} {}".format(args[1], args[2]))
+    Ramp(0, 0, 0, float(args[1]), int(args[2]))
+
+
 # input dictionary
 input_dictionary = {
     "help" : Help,
@@ -117,7 +177,8 @@ input_dictionary = {
     "setdac" : SetDACChannel,
     "startadc" : StartADCConversion,
     "getadc" : GetADCResults,
-    "readadc" : ReadADC
+    "readadc" : ReadADC,
+    "ramp": StartRamp
 }
 
 def main():
@@ -134,19 +195,26 @@ def main():
 
     while(should_close != True):
         #wait for user input 
-        usr_input = input("\nWaiting for commands. Type \"help\" for a list of commands.\n")
+        usr_input = input("\nWaiting for commands."
+                          "Type \"help\" for a list of commands.\n")
 
         #split user input using space delimiters
         split_inputs = usr_input.split()     
 
         #route user commands using dictionary
-        try:
-            input_dictionary[split_inputs[0]](split_inputs)
-        except:
-            print("Unknown command: " + "\"" + usr_input + "\"")
+        command = split_inputs[0]
+        if (command not in input_dictionary):
+            print("Unknown command: \"{}\"".format(command))
+        else:
+            #try:
+                input_dictionary[split_inputs[0]](split_inputs)
+            #except Exception as e:
+             #   print(e)
 
     #close serial port when program is finished 
     ser.close()
+
+
 
 if __name__ == "__main__":
     main()
