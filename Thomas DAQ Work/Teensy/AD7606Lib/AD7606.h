@@ -38,9 +38,10 @@ class AD7606 {
     void InterfaceCheckMode(bool enable);
     void FullReset();
     void GainCalibration(uint8_t val);
+    void HighSampleRate(bool enable);
 
     //request channel data from the ADC
-    uint32_t GetConversionData();
+    uint32_t GetConversionData(uint8_t channel);
     
 
     private:

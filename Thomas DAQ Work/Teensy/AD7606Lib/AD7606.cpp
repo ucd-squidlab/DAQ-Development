@@ -1,3 +1,7 @@
+/*
+Version 22.03.1
+*/
+
 #include "Arduino.h"
 #include "SPI.h"
 #include "AD7606.h"
@@ -27,7 +31,8 @@
 #define ADDR_GAIN(ch) (0x08+ch)
 
 
-// Dout format: number of lines used for clocking out data via SPI
+// Dout format: number of lines used for clocking out data via SPI.
+
 #define DOUTX1      0 << 3
 #define DOUTX2      1 << 3
 #define DOUTX4      2 << 3
@@ -202,27 +207,102 @@ void AD7606::StartConversion() {
     //data is ready when _busy goes low
 }
 
+void AD7606::HighSampleRate(bool enable) {
+    if (dout_format != DOUTX8 and enable) {
+        dout_format = DOUTX8;
+        UpdateConfiguration();
+    } else if (dout_format != DOUTX1 and !enable) {
+        dout_format = DOUTX1;
+        UpdateConfiguration();
+    }
+    ADCModeEnable();
+}
 
-uint32_t AD7606::GetConversionData() {
+// TODO: Allow multiple channel readings instead of just one
+uint32_t AD7606::GetConversionData(uint8_t channel) {
     if (!ADCMode) {
         ADCModeEnable();
     }
-    uint8_t upper = 0xAF, middle = 0x0A, lower = 0xF0; // Values for testing
     
+    if (channel > 0 && dout_format != DOUTX1) {
+        HighSampleRate(false);
+    }
+    
+    uint32_t result = 0;
+    uint8_t upper, middle, lower;
+    
+    /*** Below: FASTER VERSION OF TRANSFER.
+    ***/
+    // How many bytes we need to receive over SPI. If the ADC outputs 1 channel
+    // per line, then we only need 3 bytes.
+    /*
+    uint8_t bytenum = 3;
+    if (dout_format == DOUTX1) {
+        bytenum = 18;
+    }
+    
+    uint8_t position = channel*18; // Which bit to start on
+    uint8_t startbyte = position/8; // Which byte this corresponds to
+    uint8_t startbit = position % 8; // What position is bit 1 within the byte
+    
+    uint8_t data[bytenum] = {0};
+    
+    // Transfer data
     SPI.beginTransaction(adc_settings);
     digitalWrite(_cs, LOW);
-
-    //read result
+    SPI.transfer(data, bytenum);
+    digitalWrite(_cs, HIGH);
+    SPI.endTransaction();
+    
+    upper = (data[startbyte] << startbit) | (data[startbyte+1] >> (8-startbit));
+    middle = (data[startbyte+1] << startbit) | (data[startbyte+2] >> (8-startbit));
+    lower = (data[startbyte+2] << startbit) | (data[startbyte+3] >> (8-startbit));
+    */
+    
+    
+    /*** Below: SLOW VERSION OF TRANSFER. ***/
+    
+    // Transfer each channel using 3 bytes. This works because
+    // flipping the chip select pin causes the ADC to start over
+    // with the channel it was on.
+    
+    uint8_t total_transfer_num = 1; // How many channels we'll need to read from the line
+    if (dout_format == DOUTX1) {
+        total_transfer_num = 8;
+    }
+    
+    SPI.beginTransaction(adc_settings);
+    // Read the channels
+    for (int i = 0; i < total_transfer_num; ++i) {
+        digitalWrite(_cs, LOW);
+        upper = SPI.transfer(0);
+        middle = SPI.transfer(0);
+        lower = SPI.transfer(0);
+        // If this is the channel we're interested in, save it.
+        if (i == channel) {
+            result = ((upper&0xff)<<16 | (middle&0xff) << 8 | (lower&0xff));
+        }
+        digitalWrite(_cs, HIGH);
+    }
+    SPI.endTransaction();
+    
+    
+    
+    
+    /** Below: Original version, assuming only 1 channel per line **/
+    
+    /*
+    SPI.beginTransaction(adc_settings);
+    digitalWrite(_cs, LOW);
     upper = SPI.transfer(0);
     middle = SPI.transfer(0);
     lower = SPI.transfer(0);
-    
-    
     digitalWrite(_cs, HIGH);
     SPI.endTransaction();
-
+    
     // Convert
-    uint32_t result = ((upper&0xff)<<16 | (middle&0xff) << 8 | (lower&0xff));
+    result = ((upper&0xff)<<16 | (middle&0xff) << 8 | (lower&0xff));
+    */
     
     return result;
 }

@@ -5,9 +5,13 @@ import struct
 import matplotlib
 import matplotlib.pyplot as plt
 import time
+import numpy as np
 
 should_close = False
 ser = serial.Serial()
+
+
+
 
 def Quit(args):
     global should_close
@@ -19,6 +23,7 @@ def Help(args):
     print("startadc adc_channel")
     print("getadc adc_channel")
     print("readadc adc_channel")
+    print("ramp endV steps")
     print("quit")
 
 #bit map:
@@ -95,20 +100,22 @@ def StartADCConversion(args):
 def Ramp(outchannel, inchannel, startV, endV, steps):
     deltaV = (endV - startV)/steps
     voltage = startV
+    results = []
     # Add 1 to to steps so that the ending value is included
     for i in range(steps+1):
         voltage = startV + i*deltaV
         print("Output: {}".format(voltage))
         success = SetDACVoltage(voltage, channel=outchannel, wait=10)
         if (success == 0):
-            GetADCResults([0, inchannel])
+            v = GetADCResults([0, inchannel])
+            results.append(v)
         elif (success == -5):
             print("DAQ Not Responding")
-            return
+            return results
         else:
             print("DAC Error")
-            return
-    return
+            return results
+    return results
 
 def WaitForSerial(maxwaittime):
     starttime = time.time()
@@ -141,23 +148,26 @@ def GetADCResults(args):
     
     starttime = time.time()
     dt = 0
+    v = None
 
     # Assumes all incoming data is ADC data.
     # Formats and prints data as floating point numbers to the terminal
     while ser.in_waiting == 0 and dt < 0.01:
         dt = time.time() - starttime
-        
+    
     if ser.in_waiting >= 3:
         buff = ser.read(ser.in_waiting)
         if (len(buff) > 0):
             # data sent from Arduino is MSB first
-            print(Twos2Float(buff[0] << 16 | buff[1] << 8 | buff[2]))
+            v = Twos2Float(buff[0] << 16 | buff[1] << 8 | buff[2])
+            print(v)
 
-    return
+    return v
 
 def ReadADC(args):
     StartADCConversion(args);
-    GetADCResults(args);
+    v = GetADCResults(args);
+    return v
     
 
 def StartRamp(args):
@@ -165,7 +175,16 @@ def StartRamp(args):
         print("Missing arguments.")
         return
     print("Ramping... {} {}".format(args[1], args[2]))
-    Ramp(0, 0, 0, float(args[1]), int(args[2]))
+    endV = float(args[1])
+    steps = int(args[2])
+    results = Ramp(0, 0, 0, endV, steps)
+    inV = np.linspace(0, endV, steps+1)
+    print(inV)
+    print(results)
+    fig = plt.figure()
+    plt.plot(inV, results)
+    fig.show()
+    plt.show()
 
 
 # input dictionary
@@ -180,6 +199,8 @@ input_dictionary = {
     "readadc" : ReadADC,
     "ramp": StartRamp
 }
+
+
 
 def main():
     # setup and open serial port

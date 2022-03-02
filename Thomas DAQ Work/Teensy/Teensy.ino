@@ -1,4 +1,4 @@
-/** Version 22.02.4
+/** Version 22.03.1
  * (year.month.commit#)
  * 
  * Serial commands
@@ -105,8 +105,9 @@ bool LEDState = false;
 // maximum voltage. If the DAC library is changed, then
 // the feature may need to be rewritten.
 // *** NOT IMPLEMENTED ***
-uint16_t DACDeltaT[4] = {20, 0, 0, 0};
+uint16_t DACDeltaT[4] = {10, 0, 0, 0};
 // Step size when changing the DAC output voltage, in LSB
+// (Same for all channels)
 uint8_t DACStepSize = 1;
 
 
@@ -153,10 +154,10 @@ void LEDToggle() {
 
 
 // Start an ADC conversion, get the data, and send it to host over USB serial
-void GetADCReading() {
+void GetADCReading(uint8_t channel) {
     adc.StartConversion();
     delayMicroseconds(1000);
-    adc_response = adc.GetConversionData();
+    adc_response = adc.GetConversionData(channel);
     
     
     byte adc_data[3];
@@ -247,12 +248,12 @@ void loop() {
                 //begin ADC conversion
                 adc.StartConversion();
                 delayMicroseconds(100);
-                adc_response = adc.GetConversionData();
+                adc_response = adc.GetConversionData(0);
                 break;
 
             case 2:
                 // Start ADC conversion, get result, send result over serial
-                GetADCReading();
+                GetADCReading(1);
                 break;
 
             case 3:
