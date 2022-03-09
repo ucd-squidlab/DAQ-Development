@@ -54,8 +54,9 @@ class AD7606 {
     void ADCModeEnable();
     void RegisterWrite(uint8_t reg, uint8_t data);
     
-    
     SPISettings adc_settings;
+    
+    uint32_t adc_reading[8] {0};
 	
 };
 

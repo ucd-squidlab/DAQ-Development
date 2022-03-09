@@ -2,10 +2,10 @@
 
 import serial
 import struct
-import matplotlib
 import matplotlib.pyplot as plt
 import time
 import numpy as np
+from daq import *
 
 should_close = False
 ser = serial.Serial()
@@ -120,7 +120,7 @@ def SimpleRamp(outchannel, inchannel, startV, endV, steps):
     # Add 1 to to steps so that the ending value is included
     for i in range(steps+1):
         voltage = startV + i*deltaV
-        #print("Output: {}".format(voltage))
+        print("Output: {}".format(voltage))
         success = SetDACVoltage(voltage, channel=outchannel, wait=10)
         if (success == 0):
             v = GetADCResults([0, inchannel])
@@ -132,57 +132,6 @@ def SimpleRamp(outchannel, inchannel, startV, endV, steps):
             print("DAC Error")
             return results
     return results
-
-def FancyRamp(ch_out1, ch_out2, ch_in, limits1, limits2, steps1, steps2):
-    results = np.empty((0, steps2+1), float)
-    for v1 in np.linspace(limits1[0], limits1[1], steps1):
-        success = SetDACVoltage(v1, channel=ch_out1, wait=0.1)
-        if (success == 0):
-            nextRow = SimpleRamp(ch_out2, ch_in, limits2[0], limits2[1], steps2)
-            results = np.vstack((results, nextRow))
-        else:
-            print("Error.")
-            return results
-    return results
-
-
-def StartRamp(args):
-    if (len(args) < 4):
-        print("Missing arguments.")
-        return
-    print("Ramping... {} {}".format(args[1], args[2]))
-    startV = float(args[1])
-    endV = float(args[2])
-    steps = int(args[3])
-    results = SimpleRamp(0, 0, startV, endV, steps)
-    inV = np.linspace(startV, endV, steps+1)
-    fig = plt.figure()
-    plt.plot(inV, results)
-    plt.show()
-    np.savetxt("output{}.csv".format(int(time.time()%60)), results, delimiter=",")
-    return results
-
-def StartFancyRamp(args):
-    if (len(args) < 7):
-        print("Missing arguments.")
-        return
-    print("Fancy ramp...")
-    args = list(map(int, args[1:]))
-    v1 = np.linspace(args[0], args[1], args[4]+1)
-    v2 = np.linspace(args[2], args[3], args[5]+1)
-    X, Y = np.meshgrid(v1, v2)
-    results = FancyRamp(0, 1, 0, [args[0], args[1]], [args[2], args[3]], args[4], args[5])
-    plt.figure()
-    plt.plot(v2, results[0])
-    plt.show()
-    
-    # THIS DOES NOT WORK. Not sure what the correct method of plotting
-    # this would be...
-    fig = plt.figure()
-    ax = plt.axes(projection='3d')
-    ax.plot_wireframe(X, Y, results.flatten())
-    return results
-
 
 def GetDither(ch_out, ch_in, V, delta):
     results = []
@@ -214,6 +163,7 @@ def GetADCResults(args):
     ser.write(bytearray([2 << 4 | int(args[1])]))
     # write 15 bytes of padding
     ser.write(15)
+    time.sleep(0.01)
     #print("Getting data... {}".format(ser.in_waiting))
     
     starttime = time.time()
@@ -222,7 +172,7 @@ def GetADCResults(args):
 
     # Assumes all incoming data is ADC data.
     # Formats and prints data as floating point numbers to the terminal
-    while ser.in_waiting == 0 and dt < 0.02:
+    while ser.in_waiting == 0 and dt < 0.01:
         dt = time.time() - starttime
     
     if ser.in_waiting >= 3:
@@ -230,16 +180,31 @@ def GetADCResults(args):
         if (len(buff) > 0):
             # data sent from Arduino is MSB first
             v = Twos2Float(buff[0] << 16 | buff[1] << 8 | buff[2])
-            
+            print(v)
 
     return v
 
 def ReadADC(args):
     StartADCConversion(args);
     v = GetADCResults(args);
-    print(v)
     return v
     
+
+def StartRamp(args):
+    if (len(args) < 3):
+        print("Missing arguments.")
+        return
+    print("Ramping... {} {}".format(args[1], args[2]))
+    endV = float(args[1])
+    steps = int(args[2])
+    results = SimpleRamp(0, 0, 0, endV, steps)
+    inV = np.linspace(0, endV, steps+1)
+    print(inV)
+    print(results)
+    fig = plt.figure()
+    plt.plot(inV, results)
+    plt.show()
+
 
 
 # input dictionary
@@ -252,11 +217,10 @@ input_dictionary = {
     "startadc" : StartADCConversion,
     "getadc" : GetADCResults,
     "readadc" : ReadADC,
-    "ramp": StartRamp,
-    "fancy": StartFancyRamp
+    "ramp": StartRamp
 }
 
-results = []
+
 
 def main():
     # setup and open serial port
@@ -269,10 +233,6 @@ def main():
     # cleanup incoming and outgoing bits
     ser.flushInput()
     ser.flushOutput()
-    global results;
-    # results = StartFancyRamp(["", 0, 5, 0, 6, 5, 6])
-    # print(results)
-    # should_close = True
 
     while(should_close != True):
         #wait for user input 

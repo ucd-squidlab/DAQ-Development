@@ -2,9 +2,11 @@
 Version 22.03.1
 */
 
-#include "Arduino.h"
+#include <Arduino.h>
+// #include <string.h>
 #include "SPI.h"
 #include "AD7606.h"
+
 
 //ADC symbols
 //All pages reference AD7606C-18 Data Sheet Rev A
@@ -101,6 +103,9 @@ void AD7606::SetupAD7606(int cs, int rst, int busy, int convst, int baudrate) {
     
     // Wait for board to finish initializing
     delayMicroseconds(100);
+    
+    // Initialize all eight ADC readings to zero
+    memset(adc_reading, 0, sizeof(adc_reading));
 }
 
     
@@ -228,10 +233,12 @@ uint32_t AD7606::GetConversionData(uint8_t channel) {
         HighSampleRate(false);
     }
     
+    memset(adc_reading, 0, sizeof(adc_reading));
+    
     uint32_t result = 0;
     uint8_t upper, middle, lower;
     
-    /*** Below: FASTER VERSION OF TRANSFER.
+    /*** Below: FASTER VERSION OF TRANSFER. Not tested yet.
     ***/
     // How many bytes we need to receive over SPI. If the ADC outputs 1 channel
     // per line, then we only need 3 bytes.
@@ -259,7 +266,6 @@ uint32_t AD7606::GetConversionData(uint8_t channel) {
     lower = (data[startbyte+2] << startbit) | (data[startbyte+3] >> (8-startbit));
     */
     
-    
     /*** Below: SLOW VERSION OF TRANSFER. ***/
     
     // Transfer each channel using 3 bytes. This works because
@@ -279,18 +285,13 @@ uint32_t AD7606::GetConversionData(uint8_t channel) {
         middle = SPI.transfer(0);
         lower = SPI.transfer(0);
         // If this is the channel we're interested in, save it.
-        if (i == channel) {
-            result = ((upper&0xff)<<16 | (middle&0xff) << 8 | (lower&0xff));
-        }
+        adc_reading[i] = ((upper&0xff)<<16 | (middle&0xff) << 8 | (lower&0xff));
         digitalWrite(_cs, HIGH);
     }
     SPI.endTransaction();
-    
-    
-    
+    result = adc_reading[channel];
     
     /** Below: Original version, assuming only 1 channel per line **/
-    
     /*
     SPI.beginTransaction(adc_settings);
     digitalWrite(_cs, LOW);
@@ -306,3 +307,5 @@ uint32_t AD7606::GetConversionData(uint8_t channel) {
     
     return result;
 }
+
+// uint32_t AD7606::ReadConversionResult

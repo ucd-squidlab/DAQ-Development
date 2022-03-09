@@ -1,4 +1,4 @@
-/** Version 22.03.1
+/** Version 22.03.2
  * (year.month.commit#)
  * 
  * Serial commands
@@ -51,11 +51,11 @@
  * 
  */
 //DAC library header
-#include <AD5764.h>
+#include "AD5764.h"
 //ADC library header
-#include <AD7606.h>
+#include "AD7606.h"
 //Arduino SPI library header
-#include "SPI.h"
+#include <SPI.h>
 #include <algorithm>
 
 using namespace std;
@@ -105,7 +105,7 @@ bool LEDState = false;
 // maximum voltage. If the DAC library is changed, then
 // the feature may need to be rewritten.
 // *** NOT IMPLEMENTED ***
-uint16_t DACDeltaT[4] = {10, 0, 0, 0};
+uint16_t DACDeltaT[4] = {1, 0, 0, 0};
 // Step size when changing the DAC output voltage, in LSB
 // (Same for all channels)
 uint8_t DACStepSize = 1;
@@ -230,6 +230,9 @@ void loop() {
         //get function code (upper 4 bits from first data byte)
         uint8_t fnc = data[0] >> 4;
 
+        // Remove function code from first element
+        data[0] = data[0] & 0xF;
+
         bool enable;
         unsigned char response_code;
 
@@ -238,7 +241,7 @@ void loop() {
             case 0:
                 response_code = 0;
                 //change the voltage on the passed DAC channel to the passed voltage 
-                SetDAC((data[1] << 8) | data[2], data[0] & 0x7);
+                response_code = SetDAC((data[1] << 8) | data[2], data[0] & 0x7);
                 if (data[3] > 0) {
                   Serial.write(response_code);
                 }
@@ -253,7 +256,7 @@ void loop() {
 
             case 2:
                 // Start ADC conversion, get result, send result over serial
-                GetADCReading(1);
+                GetADCReading(data[0]);
                 break;
 
             case 3:
