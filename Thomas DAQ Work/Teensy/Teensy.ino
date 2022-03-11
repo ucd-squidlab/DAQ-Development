@@ -1,4 +1,4 @@
-/** Version 22.03.2
+/** Version 22.03.3
  * (year.month.commit#)
  * 
  * Serial commands
@@ -131,7 +131,10 @@ void setup() {
     LEDState = true;
 
     adc.GainCalibration(0x00);
-    SetDAC(1<<15, 4);
+    SetDAC(1<<15, 0);
+    SetDAC(1<<15, 1);
+    SetDAC(1<<15, 2);
+    SetDAC(1<<15, 3);
 }
 
 void fftToBuf(){
@@ -181,7 +184,7 @@ int SetDAC(uint16_t vout, uint8_t channel) {
     deltaT = *std::max_element(DACDeltaT, DACDeltaT+4);
     if (deltaT > 0) {
       // Abort if there are slew rate restrictions on any channels.
-      return -1;
+      return 1;
     }
   } else {
     deltaT = DACDeltaT[channel];
@@ -244,6 +247,7 @@ void loop() {
                 response_code = SetDAC((data[1] << 8) | data[2], data[0] & 0x7);
                 if (data[3] > 0) {
                   Serial.write(response_code);
+//                  Serial.write(data[1]);
                 }
                 break;
 

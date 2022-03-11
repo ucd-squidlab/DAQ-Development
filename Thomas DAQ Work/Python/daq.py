@@ -13,6 +13,7 @@ import serial
 import struct
 import time
 
+ser = serial.Serial()
 
 functionCodes = {
     "SETDAC": 0,
@@ -21,6 +22,21 @@ functionCodes = {
     "ICHECK": 3,
     "RESETADC": 4
     }
+
+# Returns -1 if there is an error.
+def Setup(port, baudrate="115200", timeout="1"):
+    global ser
+    # setup and open serial port
+    ser.baudrate = baudrate
+    #ser.port = '/dev/tty.usbmodemfd141'
+    ser.port = port
+    ser.timeout = timeout
+    try:
+        ser.open()
+    except:
+        return 0
+    return -1
+
 
 #function for converting a floating point value to a value usable by the DAC
 def Float2DAC(f):
@@ -55,15 +71,15 @@ def ReadSerial(timeout=0):
 
 def SetDACVoltage(voltage, channel=0, wait=0):
     #write serial data, forcing MSB first order
-    data = bytes([functionCodes["SETDAC"] << 4 | int(channel) << 2])
+    data = bytes([0 << 4 | int(channel) << 2])
     data = data + Float2DAC(voltage).to_bytes(2, 'big')
     data = data + bytes([1])
-    data = data + bytes(16 - len(data)) # Pad to 16 bytes
     ser.write(data)
-    
+    #write 12 bytes of padding
+    ser.write(12)
     response_code = -1
     if (wait>0):
-        response = ReadSerial(timeout=wait)
+        response = WaitForSerial(wait)
         if (len(response) == 0):
             return -5;
         response_code = response[0]

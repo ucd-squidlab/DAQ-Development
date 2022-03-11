@@ -1,4 +1,4 @@
-# Version 22.03.2
+# Version 22.03.3
 
 import serial
 import struct
@@ -32,6 +32,8 @@ def Help(args):
 
 #function for converting a floating point value to a value usable by the DAC
 def Float2DAC(f):
+    f = min(9.9995, f)
+    f = max(-9.9995, f)
     return int((16384 * ((float(f)/5.0) + 2)))
 
 
@@ -49,49 +51,28 @@ def Twos2Float(i):
 
 def SetDACChannel(args):
     #expected arguments: DAC channel(1), channel value(2)
-
     #function code: 0
-    global ser
-
     if len(args) != 3: 
         print("Passed " + str(len(args)) + " arguments. Expected 3.")
         return
+    SetDACVoltage(int(args[1]), float(args[2]))
 
-    #write serial data, forcing MSB first order 
-    ser.write(bytearray([0 << 4 | int(args[1]) << 2]))
-    ser.write(struct.pack('>H', Float2DAC(args[2])))
-    #write 13 bytes of padding
-    ser.write(13)
 
-# def SetDACVoltage(voltage, channel=0, wait=0):
-#     #write serial data, forcing MSB first order
-#     ser.write(bytearray([0 << 4 | int(channel) << 2]))
-#     ser.write(struct.pack('>H', Float2DAC(voltage)))
-#     ser.write(bytearray([1]))
-#     #write 12 bytes of padding
-#     ser.write(12)
-#     response_code = -1
-#     if (wait>0):
-#         response = WaitForSerial(wait)
-#         if (len(response) == 0):
-#             return -5;
-#         response_code = response[0]
-#     return response_code
-
-def SetDACVoltage(voltage, channel=0, wait=0):
+def SetDACVoltage(channel, voltage, wait=0):
+    # print("V={}, ch={}".format(voltage, channel))
     #write serial data, forcing MSB first order
-    data = bytes([0 << 4 | int(channel) << 2])
+    data = bytes([0 << 4 | int(channel)])
     data = data + Float2DAC(voltage).to_bytes(2, 'big')
-    data = data + bytes([1])
+    data = data + bytes([+(wait>0)])
+    data = data + bytes(12) #write 12 bytes of padding
     ser.write(data)
-    #write 12 bytes of padding
-    ser.write(12)
-    response_code = -1
+    response_code = 0
     if (wait>0):
         response = WaitForSerial(wait)
         if (len(response) == 0):
             return -5;
         response_code = response[0]
+        # print(response_code)
     return response_code
     
 
@@ -113,7 +94,8 @@ def StartADCConversion(args):
 # Steps: how many parts to divide the range into. Min: 1
 # A value of 1 will result in a total of two measurements, one at the top
 # and the other at the bottom of the range
-def SimpleRamp(outchannel, inchannel, startV, endV, steps):
+# settle (seconds): wait time after each step before taking a measurement
+def SimpleRamp(outchannel, inchannel, startV, endV, steps, settle=0):
     deltaV = (endV - startV)/steps
     voltage = startV
     results = []
@@ -121,27 +103,35 @@ def SimpleRamp(outchannel, inchannel, startV, endV, steps):
     for i in range(steps+1):
         voltage = startV + i*deltaV
         #print("Output: {}".format(voltage))
-        success = SetDACVoltage(voltage, channel=outchannel, wait=10)
+        success = SetDACVoltage(outchannel, voltage, wait=0)
         if (success == 0):
+            time.sleep(settle)
             v = GetADCResults([0, inchannel])
             results.append(v)
         elif (success == -5):
             print("DAQ Not Responding")
             return results
         else:
-            print("DAC Error")
+            print("DAC Error {}".format(success))
+            print("Channel {}".format(outchannel))
             return results
     return results
 
-def FancyRamp(ch_out1, ch_out2, ch_in, limits1, limits2, steps1, steps2):
+# ch_out1: Slow
+# ch_out2: Fast
+def FancyRamp(ch_out1, ch_out2, ch_in, limits1, limits2, steps1, steps2,
+              settle=0):
     results = np.empty((0, steps2+1), float)
-    for v1 in np.linspace(limits1[0], limits1[1], steps1):
-        success = SetDACVoltage(v1, channel=ch_out1, wait=0.1)
+    print(SetDACVoltage(ch_out1, limits1[0], wait=1))
+    print("Initialization complete.")
+    for v1 in np.linspace(limits1[0], limits1[1], steps1+1):
+        success = SetDACVoltage(ch_out1, v1, wait=0)
         if (success == 0):
-            nextRow = SimpleRamp(ch_out2, ch_in, limits2[0], limits2[1], steps2)
+            nextRow = SimpleRamp(ch_out2, ch_in, limits2[0], limits2[1],
+                                 steps2, settle=settle)
             results = np.vstack((results, nextRow))
         else:
-            print("Error.")
+            print("Error. {}".format(success))
             return results
     return results
 
@@ -170,8 +160,9 @@ def StartFancyRamp(args):
     args = list(map(int, args[1:]))
     v1 = np.linspace(args[0], args[1], args[4]+1)
     v2 = np.linspace(args[2], args[3], args[5]+1)
-    X, Y = np.meshgrid(v1, v2)
-    results = FancyRamp(0, 1, 0, [args[0], args[1]], [args[2], args[3]], args[4], args[5])
+    X, Y = np.meshgrid(v2, v1)
+    results = FancyRamp(0, 1, 0, [args[0], args[1]], [args[2], args[3]], args[4], args[5], 
+                        settle=0.01)
     plt.figure()
     plt.plot(v2, results[0])
     plt.show()
@@ -180,7 +171,7 @@ def StartFancyRamp(args):
     # this would be...
     fig = plt.figure()
     ax = plt.axes(projection='3d')
-    ax.plot_wireframe(X, Y, results.flatten())
+    ax.plot_wireframe(X, Y, results)
     return results
 
 
@@ -265,14 +256,17 @@ def main():
     ser.port = 'COM7'
     ser.timeout = 1
     ser.open()
+    
 
     # cleanup incoming and outgoing bits
     ser.flushInput()
     ser.flushOutput()
     global results;
-    # results = StartFancyRamp(["", 0, 5, 0, 6, 5, 6])
-    # print(results)
-    # should_close = True
+    results = StartFancyRamp(["", -2.5, 2.5, 0, 1, 20, 20])
+    print(results)
+    SetDACVoltage(0, 0, wait=2)
+    SetDACVoltage(1, 0, wait=2)
+    should_close = True
 
     while(should_close != True):
         #wait for user input 

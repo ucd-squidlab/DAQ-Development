@@ -106,6 +106,9 @@ void AD7606::SetupAD7606(int cs, int rst, int busy, int convst, int baudrate) {
     
     // Initialize all eight ADC readings to zero
     memset(adc_reading, 0, sizeof(adc_reading));
+    
+    // Whether the saved data corresponds to the last conversion
+    upToDate = false;
 }
 
     

@@ -60,10 +60,10 @@ void AD5764::SetupAD5764(int cs, int ldac, int clr) {
 
 	//write pin values
 	//eval-AD5764 board, LK8 jumper is currently driven (A) (if connected to ground, would be unnecessary) 
-	digitalWrite(_ldac, LOW);    //we will not use LDAC, so it will be driven low, dac will automatically respoind with rising edge of the chip select signal
+	//digitalWrite(_ldac, LOW);    //we will not use LDAC, so it will be driven low, dac will automatically respoind with rising edge of the chip select signal
 
 	//the DAC has a startup reset method, which will automatically clear the DAC on start
-	digitalWrite(_clr, HIGH);    //not going to clear the DAC, must be driven high
+	//digitalWrite(_clr, HIGH);    //not going to clear the DAC, must be driven high
 
 	//place DAC into known state ( 0 on all channels )
 	SetDataRegister(CONVERT_VALUE2DAC(0), DAC_ALL);
