@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-""" daq.py
+""" daq.py - 22.03.4
 
 A module containing basic DAQ methods:
     - Setting a voltage on a DAC channel
@@ -35,7 +35,7 @@ functionCodes = {
     }
 
 # Returns -1 if there is an error.
-def setup(port, baudrate="115200", timeout="1"):
+def setup(port, baudrate=115200, timeout=1):
     global ser
     # setup and open serial port
     ser.baudrate = baudrate
@@ -45,10 +45,10 @@ def setup(port, baudrate="115200", timeout="1"):
     try:
         ser.open()
     except:
-        return 0
+        return -1
     ser.flushInput()
     ser.flushOutput()
-    return -1
+    return 0
 
 def close():
     global ser
@@ -75,11 +75,11 @@ def Twos2Float(i):
         val -= FSR
     return val
 
-def _WaitForSerial(maxwaittime):
+def _WaitForSerial(timeout=0):
     starttime = time.time()
 
     while ser.in_waiting == 0:
-        if time.time() - starttime > maxwaittime:
+        if time.time() - starttime > timeout:
             return []
         
     buff = ser.read(ser.in_waiting)
@@ -107,14 +107,14 @@ def StartADCConversion():
     
     #write serial data, forcing MSB first order
     data = bytearray(16)
-    data[0] = bytes([functionCodes["BEGINADC"] << 4])
+    data[0] = bytes([functionCodes["BEGINADC"] << 4])[0]
     ser.write(data)
     return
 
 def GetADCResult(channel):
     # Send command 
     data = bytearray(16)
-    data[0] = [functionCodes["READADC"] << 4 | int(channel)]
+    data[0] = functionCodes["GETADC"] << 4 | int(channel)
     ser.write(data)
     
     v = None
@@ -126,10 +126,16 @@ def GetADCResult(channel):
         v = Twos2Float(buff[0] << 16 | buff[1] << 8 | buff[2])
     
     return v
-    
+
+# Can pass an array of channels to get readings from multiple channels.
 def ReadADC(channel):
     StartADCConversion()
-    v = GetADCResult(channel)
+    if (hasattr(channel, "__len__")):
+        v = []
+        for c in channel:
+            v.append(GetADCResult(c))
+    else:
+        v = GetADCResult(channel)
     return v
 
 

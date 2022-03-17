@@ -1,5 +1,7 @@
 # Version 22.03.3
 
+# DEPRECATED
+
 import serial
 import struct
 import matplotlib

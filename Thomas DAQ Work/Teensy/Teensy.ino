@@ -1,4 +1,4 @@
-/** Version 22.03.3
+/** Version 22.03.4
  * (year.month.commit#)
  * 
  * Serial commands
@@ -27,10 +27,10 @@
  *    Trigger an ADC conversion.
  *    
  *    
- * 2. Get ADC Reading
+ * 2. Get ADC Result
  *    Code: 2
  *    
- *    Trigger an ADC conversion, read the result, and
+ *    Read the result of the last conversion and
  *    return result in 3 bytes over serial. The first 18 bits
  *    of the result contain the ADC reading.
  *    
@@ -156,10 +156,10 @@ void LEDToggle() {
 }
 
 
-// Start an ADC conversion, get the data, and send it to host over USB serial
-void GetADCReading(uint8_t channel) {
-    adc.StartConversion();
-    delayMicroseconds(1000);
+// Get the result from last conversion and send it to host over USB serial
+void GetADCResult(uint8_t channel) {
+//    adc.StartConversion();
+//    delayMicroseconds(1000);
     adc_response = adc.GetConversionData(channel);
     
     
@@ -259,8 +259,8 @@ void loop() {
                 break;
 
             case 2:
-                // Start ADC conversion, get result, send result over serial
-                GetADCReading(data[0]);
+                // Get result of last conversion, send result over serial
+                GetADCResult(data[0]);
                 break;
 
             case 3:

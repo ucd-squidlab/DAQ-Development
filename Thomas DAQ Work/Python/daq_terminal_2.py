@@ -1,11 +1,11 @@
-# Version 22.03.3
+# Version 22.03.4
 
 import matplotlib.pyplot as plt
 import time
 import numpy as np
 
 # import daq
-import daq_advanced as daq
+import daq
 
 should_close = False
 
@@ -58,7 +58,7 @@ def StartFancyRamp(args):
     v2 = np.linspace(args[2], args[3], args[5]+1)
     X, Y = np.meshgrid(v2, v1)
     results = daq.FancyRamp(0, 1, 0, [args[0], args[1]], [args[2], args[3]], args[4], args[5], 
-                        settle=0.01)
+                        settle=0)
     plt.figure()
     plt.plot(v2, results[0])
     plt.show()
@@ -93,11 +93,11 @@ def main():
     daq.setup("COM7")
     
     global results;
-    results = StartFancyRamp(["", -2.5, 2.5, 0, 1, 20, 20])
-    print(results)
+    # results = StartFancyRamp(["", -2.5, 2.5, 0, 1, 15, 15])
+    # print(results)
     daq.SetDACVoltage(0, 0, wait=2)
     daq.SetDACVoltage(1, 0, wait=2)
-    should_close = True
+    # should_close = True
 
     while(should_close != True):
         #wait for user input 
@@ -112,10 +112,7 @@ def main():
         if (command not in input_dictionary):
             print("Unknown command: \"{}\"".format(command))
         else:
-            #try:
-                input_dictionary[split_inputs[0]](split_inputs)
-            #except Exception as e:
-             #   print(e)
+            input_dictionary[split_inputs[0]](split_inputs)
 
     #close serial port when program is finished 
     daq.close()
