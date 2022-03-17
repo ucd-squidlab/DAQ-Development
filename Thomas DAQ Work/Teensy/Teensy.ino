@@ -278,6 +278,7 @@ void loop() {
                 break;
 
             case 5:
+                // Get FFT (NOT IMPLEMENTED)
                 break;
             
             default:
