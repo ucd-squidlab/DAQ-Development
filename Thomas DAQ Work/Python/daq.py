@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-""" daq.py - 22.03.4
+""" daq.py - 22.03.5
 
 A module containing basic DAQ methods:
     - Setting a voltage on a DAC channel
