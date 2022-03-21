@@ -3,6 +3,7 @@
 import matplotlib.pyplot as plt
 import time
 import numpy as np
+import traceback
 
 # import daq
 import daq
@@ -69,8 +70,50 @@ def StartFancyRamp(args):
     return results
 
 
+def GetFastSample(args):
+    print("Initializing...")
+    daq.StartFastSample(count=65000)
+    print("Started.")
+    print(" Collecting data...")
+    result = daq.GetFastSampleResult(timeout=3)
+    print(len(result))
+    plt.figure()
+    plt.plot(range(len(result)), result)
+    plt.show()
+    return
+
+def GetFFT(args):
+    size = 800
+    count = 600
+    offset = 100
+    
+    repeat = 4
+    
+    fft = np.zeros(size)
+    daq.StartFastSample(count=size+(count-1)*offset)
+    
+    for r in range(repeat):
+        data = daq.GetFastSampleResult()
+        daq.StartFastSample(count=size+(count-1)*offset)
+        for i in range(count):
+            fft_sample = np.fft.fft(data[offset*i:size+offset*i])
+            # fft_sample = fft_sample * np.conjugate(fft_sample)
+            fft_sample = np.abs(fft_sample)
+            fft = fft + fft_sample/count
+        print(len(fft))
+    fig = plt.figure()
+    ax = fig.add_subplot()
+    ax.plot(np.array(range(int(len(fft)/2)-4))/(800*10e-6), fft[4:int(len(fft)/2)])
+    ax.set_xscale('log')
+    # ax.set_yscale('log')
+    plt.show()
+    return
+    
+    
+
 def ReadADC(args):
     v = daq.ReadADC(int(args[1]))
+    print(v)
     return v
     
 
@@ -84,13 +127,17 @@ input_dictionary = {
     "setdac" : SetDAC,
     "readadc" : ReadADC,
     "ramp": StartRamp,
-    "fancy": StartFancyRamp
-}
+    "fancy": StartFancyRamp,
+    "fast": GetFastSample,
+    "fft": GetFFT
+    }
+
 
 results = []
 
 def main():
     daq.setup("COM7")
+    global should_close
     
     global results;
     # results = StartFancyRamp(["", -2.5, 2.5, 0, 1, 15, 15])
@@ -112,8 +159,12 @@ def main():
         if (command not in input_dictionary):
             print("Unknown command: \"{}\"".format(command))
         else:
-            input_dictionary[split_inputs[0]](split_inputs)
-
+            try:
+                input_dictionary[split_inputs[0]](split_inputs)
+            except:
+                print(traceback.format_exc())
+                should_close = True
+                
     #close serial port when program is finished 
     daq.close()
 

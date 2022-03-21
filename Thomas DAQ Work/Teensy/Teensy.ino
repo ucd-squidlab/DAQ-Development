@@ -93,10 +93,14 @@ AD7606 adc;
 #define BUFFERSIZE 2
 //ADC conversion data buffer
 volatile uint8_t adc_data[4][BUFFERSIZE];
-int adc_response;
 
-long fft[50000];
-byte buf[200000];
+byte fast_samples[200000];
+int sample_count = 0;
+int target_count;
+IntervalTimer fast_sample_timer;
+bool active_sampling = false;
+
+
 bool LEDState = false;
 
 // How long to change an output voltage, in microseconds per step.
@@ -116,7 +120,7 @@ uint8_t DACStepSize = 1;
 uint16_t DACVout[4] = {1<<15};
 
 void setup() {
-    //begin serial communication with a BAUD rate of 115200
+    //begin serial communication
     Serial.begin(250000);
 
     //setup the DAC (see the AD5764 library for details)
@@ -126,7 +130,6 @@ void setup() {
 
     //setup LED pin for output
     pinMode(LED, OUTPUT);
-
     digitalWrite(LED, HIGH);
     LEDState = true;
 
@@ -137,12 +140,17 @@ void setup() {
     SetDAC(1<<15, 3);
 }
 
-void fftToBuf(){
-  for (int i = 0;i < 10000;i++){
-    buf[i*4]=((fft[i]>>24)&0xFF);
-    buf[i*4+1]=((fft[i]>>16)&0xFF);
-    buf[i*4+2]=((fft[i]>>8)&0xFF);
-    buf[i*4+3]=(fft[i]&0xFF);
+void GetFastSample() {
+  adc.StartConversion();
+  delayMicroseconds(1);
+  uint32_t adc_response = adc.GetConversionData(0);
+  fast_samples[sample_count*3] = (adc_response >> 16) & 0xFF;
+  fast_samples[sample_count*3 + 1] = (adc_response >> 8) & 0xFF;
+  fast_samples[sample_count*3 + 2] = (adc_response) & 0xFF;
+  ++sample_count;
+  if (sample_count >= target_count) {
+    fast_sample_timer.end();
+    active_sampling = false;
   }
 }
 
@@ -160,15 +168,13 @@ void LEDToggle() {
 void GetADCResult(uint8_t channel) {
 //    adc.StartConversion();
 //    delayMicroseconds(1000);
-    adc_response = adc.GetConversionData(channel);
-    
+    uint32_t adc_response = adc.GetConversionData(channel);
     
     byte adc_data[3];
     adc_data[0] = (adc_response >> 16)&0xFF;
     adc_data[1] = (adc_response >> 8)&0xFF;
     adc_data[2] = (adc_response)&0xFF;
 
-    //byte otherdata[3] = {0xFB, 0xAD, 0x0A}; //debug
     Serial.write(adc_data, 3);
 }
 
@@ -181,11 +187,15 @@ int SetDAC(uint16_t vout, uint8_t channel) {
 
   // Get time delay for each step
   if (channel == 4) {
-    deltaT = *std::max_element(DACDeltaT, DACDeltaT+4);
-    if (deltaT > 0) {
-      // Abort if there are slew rate restrictions on any channels.
-      return 1;
-    }
+    SetDAC(vout, 0);
+    SetDAC(vout, 1);
+    SetDAC(vout, 2);
+    SetDAC(vout, 3);
+//    deltaT = *std::max_element(DACDeltaT, DACDeltaT+4);
+//    if (deltaT > 0) {
+//      // Abort if there are slew rate restrictions on any channels.
+//      return 1;
+//    }
   } else {
     deltaT = DACDeltaT[channel];
   }
@@ -217,15 +227,20 @@ int SetDAC(uint16_t vout, uint8_t channel) {
   return 0;
 }
 
+
+
 void loop() {
     //wait for a valid 16 byte data stream to become available
 
     //if Serial.available() % 16 != 0 after a communication is completed, then the Arduino will not process
     //the bitstream properly, the fastest way to fix this is a restart, the input stream can also be flushed with data
     //until Serial.available() % 16 == 0.
-
+    bool disable;
+    noInterrupts();
+    disable = active_sampling;
+    interrupts();
     
-    if (Serial.available() >= 16) {
+    if (Serial.available() >= 16 && !disable) {
         //read 16 bytes of serial data into a data buffer
         unsigned char data[16];
         Serial.readBytes(data, 16);
@@ -238,6 +253,7 @@ void loop() {
 
         bool enable;
         unsigned char response_code;
+        
 
         //branch based on function code 
         switch (fnc) {                
@@ -254,8 +270,6 @@ void loop() {
             case 1:
                 //begin ADC conversion
                 adc.StartConversion();
-                delayMicroseconds(100);
-                adc_response = adc.GetConversionData(0);
                 break;
 
             case 2:
@@ -278,9 +292,21 @@ void loop() {
                 break;
 
             case 5:
-                // Get FFT (NOT IMPLEMENTED)
+                // Get a set of fast samples from channel 0
+                adc.HighSampleRate(true);
+                sample_count = 0;
+                target_count = (data[1] << 8) + (data[2]);
+                active_sampling = true;
+                fast_sample_timer.begin(GetFastSample, data[0]);
                 break;
-            
+
+            case 6:
+                // Send fast sample result over serial to host
+                if (sample_count > 0) {
+                  Serial.write(fast_samples, sample_count*3);
+                }
+                break;
+                
             default:
                 LEDToggle();
         }

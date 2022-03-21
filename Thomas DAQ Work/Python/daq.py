@@ -31,7 +31,9 @@ functionCodes = {
     "BEGINADC": 1,
     "GETADC": 2,
     "ICHECK": 3,
-    "RESETADC": 4
+    "RESETADC": 4,
+    "STARTFAST": 5,
+    "GETFASTRESULT": 6
     }
 
 # Returns -1 if there is an error.
@@ -71,18 +73,22 @@ def Twos2Float(i):
     FSR = 20.0 #full scale voltage range, can take 4 different values
 
     val = (i >> (24-RES))/(2**RES)*FSR
-    if (i & (1<<23) > 0):
-        val -= FSR
+    
+    # Loop to -FSR/2 if the first bit was a 1
+    val = val - (i & (1<<23) > 0)*FSR
+    # if (i & (1<<23) > 0):
+    #     val -= FSR
     return val
 
 def _WaitForSerial(timeout=0):
     starttime = time.time()
-
+    buff = b""
     while ser.in_waiting == 0:
         if time.time() - starttime > timeout:
-            return []
-        
-    buff = ser.read(ser.in_waiting)
+            return b""
+    while ser.in_waiting > 0:
+        buff = buff + ser.read(ser.in_waiting)
+        time.sleep(0.02*timeout)
     return buff
 
 def SetDACVoltage(channel, voltage, wait=0):
@@ -138,8 +144,25 @@ def ReadADC(channel):
         v = GetADCResult(channel)
     return v
 
+def StartFastSample(dmicro=10, count=400):
+    data = bytearray(16)
+    data[0] = functionCodes["STARTFAST"] << 4 | (dmicro&0x0f)
+    data[1] = (count >> 8) & 0xff
+    data[2] = (count) & 0xff
+    ser.write(data)
 
 
+def GetFastSampleResult(timeout=1):
+    data = bytearray(16)
+    data[0] = functionCodes["GETFASTRESULT"] << 4
+    ser.write(data)
+    result = _WaitForSerial(timeout=timeout)
+    if (len(result) > 3):
+        pass
+        result = np.array(list(result))
+        result = (result[0::3] << 16) + (result[1::3] << 8) + result[2::3]
+        result = Twos2Float(result)
+    return result
 
 
 # Steps: how many parts to divide the range into. Min: 1
@@ -164,7 +187,6 @@ def SimpleRamp(outchannel, inchannel, startV, endV, steps, settle=0):
             return results
         else:
             print("DAC Error {}".format(success))
-            print("Channel {}".format(outchannel))
             return results
     return results
 
@@ -187,6 +209,15 @@ def FancyRamp(ch_out1, ch_out2, ch_in, limits1, limits2, steps1, steps2,
             return results
     return results
 
-def GetDither(ch_out, ch_in, V, delta):
+def GetDither(ch_out1, ch_out2, ch_in, vout1, vout2, d1, d2):
     results = []
+    points = [(vout1-d1, vout2),
+            (vout1, vout2 - d2), (vout1, vout2), (vout1, vout2 + d2),
+            (vout1+d1, vout2)]
+    
+    for p in points:
+        SetDACVoltage(ch_out1, p[0])
+        SetDACVoltage(ch_out2, p[1])
+        results.append(ReadADC(ch_in))
+    
     return results;
