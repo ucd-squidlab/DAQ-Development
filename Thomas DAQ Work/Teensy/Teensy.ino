@@ -1,4 +1,4 @@
-/** Version 22.03.5
+/** Version 22.03.6
  * (year.month.commit#)
  * 
  * Serial commands
@@ -94,7 +94,7 @@ AD7606 adc;
 //ADC conversion data buffer
 volatile uint8_t adc_data[4][BUFFERSIZE];
 
-byte fast_samples[200000];
+byte fast_samples[300000];
 int sample_count = 0;
 int target_count;
 IntervalTimer fast_sample_timer;
@@ -143,10 +143,15 @@ void setup() {
 void GetFastSample() {
   adc.StartConversion();
   delayMicroseconds(1);
-  uint32_t adc_response = adc.GetConversionData(0);
-  fast_samples[sample_count*3] = (adc_response >> 16) & 0xFF;
-  fast_samples[sample_count*3 + 1] = (adc_response >> 8) & 0xFF;
-  fast_samples[sample_count*3 + 2] = (adc_response) & 0xFF;
+//  uint32_t adc_response = adc.GetConversionData(0);
+//  fast_samples[sample_count*3] = (adc_response >> 16) & 0xFF;
+//  fast_samples[sample_count*3 + 1] = (adc_response >> 8) & 0xFF;
+//  fast_samples[sample_count*3 + 2] = (adc_response) & 0xFF;
+  uint8_t adc_response[3] = {0};
+  adc.GetConversionDataFast(adc_response);
+  fast_samples[sample_count*3] = adc_response[0];
+  fast_samples[sample_count*3 + 1] = adc_response[1];
+  fast_samples[sample_count*3 + 2] = adc_response[2];
   ++sample_count;
   if (sample_count >= target_count) {
     fast_sample_timer.end();
@@ -183,7 +188,7 @@ void GetADCResult(uint8_t channel) {
 // 0xFFFF = 10V
 int SetDAC(uint16_t vout, uint8_t channel) {
   // Get the deltaT for each step
-  uint16_t deltaT;
+  uint16_t deltaT = 0;
 
   // Get time delay for each step
   if (channel == 4) {
@@ -191,6 +196,7 @@ int SetDAC(uint16_t vout, uint8_t channel) {
     SetDAC(vout, 1);
     SetDAC(vout, 2);
     SetDAC(vout, 3);
+    return 0;
 //    deltaT = *std::max_element(DACDeltaT, DACDeltaT+4);
 //    if (deltaT > 0) {
 //      // Abort if there are slew rate restrictions on any channels.
@@ -239,7 +245,9 @@ void loop() {
     noInterrupts();
     disable = active_sampling;
     interrupts();
-    
+    if (disable) {
+      return;
+    }
     if (Serial.available() >= 16 && !disable) {
         //read 16 bytes of serial data into a data buffer
         unsigned char data[16];
@@ -295,9 +303,9 @@ void loop() {
                 // Get a set of fast samples from channel 0
                 adc.HighSampleRate(true);
                 sample_count = 0;
-                target_count = (data[1] << 8) + (data[2]);
+                target_count = (data[2] << 8) + (data[3]);
                 active_sampling = true;
-                fast_sample_timer.begin(GetFastSample, data[0]);
+                fast_sample_timer.begin(GetFastSample, data[1]);
                 break;
 
             case 6:

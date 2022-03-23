@@ -42,6 +42,7 @@ class AD7606 {
 
     //request channel data from the ADC
     uint32_t GetConversionData(uint8_t channel);
+    void GetConversionDataFast(uint8_t (& result)[3]);
     
 
     private:
@@ -49,6 +50,7 @@ class AD7606 {
     uint8_t status_header, ext_os_clock, dout_format, operation_mode;
     bool ADCMode;
     bool diagnosticMode;
+    bool uptodate;
     
     void RegisterModeEnable();
     void ADCModeEnable();

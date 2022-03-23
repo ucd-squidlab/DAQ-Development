@@ -1,11 +1,11 @@
-# Version 22.03.5
+# Version 22.03.6
 
 import matplotlib.pyplot as plt
 import time
 import numpy as np
 import traceback
 
-# import daq
+# import daq module
 import daq
 
 should_close = False
@@ -84,37 +84,113 @@ def GetFastSample(args):
 
 def GetFFT(args):
     size = 800
-    count = 600
-    offset = 100
+    count = 200
+    offset = 200
+    dmicro = int(args[1])
     
     repeat = 4
     
-    fft = np.zeros(size)
-    daq.StartFastSample(count=size+(count-1)*offset)
+    
+    fft = np.zeros(int(size/2)+1)
+    daq.StartFastSample(dmicro=dmicro, count=size+(count-1)*offset)
     
     for r in range(repeat):
-        data = daq.GetFastSampleResult()
-        daq.StartFastSample(count=size+(count-1)*offset)
+        data = daq.GetFastSampleResult(timeout=10)
+        daq.StartFastSample(dmicro=dmicro, count=size+(count-1)*offset)
         for i in range(count):
-            fft_sample = np.fft.fft(data[offset*i:size+offset*i])
+            fft_sample = np.fft.rfft(data[offset*i:size+offset*i])
             # fft_sample = fft_sample * np.conjugate(fft_sample)
             fft_sample = np.abs(fft_sample)
-            fft = fft + fft_sample/count
+            fft = fft + fft_sample/(count*repeat)
         print(len(fft))
+        
+    T = size*dmicro*1e-6
+    freq = np.array(range(int(size/2)+1)) / T
+    
     fig = plt.figure()
     ax = fig.add_subplot()
-    ax.plot(np.array(range(int(len(fft)/2)-4))/(800*10e-6), fft[4:int(len(fft)/2)])
+    ax.plot(freq[4:int(len(fft))], fft[4:int(len(fft))])
     ax.set_xscale('log')
-    # ax.set_yscale('log')
+    ax.set_yscale('log')
     plt.show()
     return
+
+
+def GetFFT2(args):
+    # The FFT function from the daq module uses averaging for the FFTs.
+    # The averaging works by taking several overlapping sample ranges,
+    # computing the FFT for each one, and averaging the results.
+    # For the FFT function from the daq module, we need to specify:
+    # - size: the number of samples for each FFT
+    # - count: the number of averages (this has an upper limit due to
+    #          finite DAQ storage space)
+    # - offset_factor: the offset for each overlapping sample range
+    #                  (0 = complete overlap, 1 = no overlap)
+    # - dmicro: Delay between samples, in microseconds
     
+    size = 800
+    avgnum = 50
+    offset_factor = 0.125
+    
+    dmicro = 10
+    
+    # We can repeat this process to get around the upper limit
+    repeat = 3
+    
+    fft = np.zeros(int(size/2)+1)
+    
+    # Take the FFTs and average them
+    for r in range(repeat):
+        fft_sample = daq.GetFFT(size, avgnum,
+                                dmicro=dmicro, offset_factor=offset_factor)
+        fft = fft + fft_sample/repeat
+    
+    # Take the magnitude
+    fft = np.abs(fft)
+    
+    # Calculate frequencies. For a bin n, the frequency is given by:
+    #        f = n / T
+    # where T is the total sampling time
+    T = size*dmicro*1e-6
+    freq = np.array(range(int(size/2)+1)) / T
+    
+    # Plot the FFT
+    fig = plt.figure()
+    ax = fig.add_subplot()
+    ax.plot(freq[4:int(len(fft))], fft[4:int(len(fft))])
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    plt.show()
+    return
     
 
 def ReadADC(args):
     v = daq.ReadADC(int(args[1]))
     print(v)
     return v
+
+def StartDitherRamp(args):
+    ch_out = [0, 1]
+    ch_in = 0
+    limits = [(0, 10), (0, 10)]
+    steps = [10, 10]
+    results = daq.DitherRamp(ch_out, ch_in, limits, steps)
+    # Pull out the middle item from each tuple
+    select_data = [[a[3] for a in b] for b in results]
+    select_data = np.array(select_data)
+    
+    v1 = np.linspace(limits[0][0], limits[0][1], steps[0])
+    v2 = np.linspace(limits[1][0], limits[1][1], steps[1])
+    
+    X, Y = np.meshgrid(v2, v1)
+    
+    plt.figure()
+    ax = plt.axes(projection='3d')
+    ax.plot_wireframe(X, Y, select_data)
+    
+    return results
+    
+    
     
 
 
@@ -128,15 +204,17 @@ input_dictionary = {
     "readadc" : ReadADC,
     "ramp": StartRamp,
     "fancy": StartFancyRamp,
+    "ditherramp": StartDitherRamp,
     "fast": GetFastSample,
-    "fft": GetFFT
+    "fft": GetFFT,
+    "fft2": GetFFT2
     }
 
 
 results = []
 
 def main():
-    daq.setup("COM7")
+    daq.setup("COM7", baudrate=115200)
     global should_close
     
     global results;

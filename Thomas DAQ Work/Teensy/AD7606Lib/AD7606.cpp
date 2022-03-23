@@ -34,7 +34,7 @@ Version 22.03.1
 
 
 // Dout format: number of lines used for clocking out data via SPI.
-
+// This library assumes access to only line 0.
 #define DOUTX1      0 << 3
 #define DOUTX2      1 << 3
 #define DOUTX4      2 << 3
@@ -108,7 +108,7 @@ void AD7606::SetupAD7606(int cs, int rst, int busy, int convst, int baudrate) {
     memset(adc_reading, 0, sizeof(adc_reading));
     
     // Whether the saved data corresponds to the last conversion
-    upToDate = false;
+    uptodate = false;
 }
 
     
@@ -215,6 +215,7 @@ void AD7606::StartConversion() {
     //data is ready when _busy goes low
 }
 
+// Enable high sampling rate by splitting output over all 8 doutx lines.
 void AD7606::HighSampleRate(bool enable) {
     if (dout_format != DOUTX8 and enable) {
         dout_format = DOUTX8;
@@ -226,7 +227,24 @@ void AD7606::HighSampleRate(bool enable) {
     ADCModeEnable();
 }
 
-// TODO: Allow multiple channel readings instead of just one
+// Quickly get conversion data for channel 0. Assumes that
+// we are in fast mode, and returns a pointer to an array
+// containing the 3 bytes of the result.
+void AD7606::GetConversionDataFast(uint8_t (& result)[3]) {
+    result[0] = 0;
+    result[1] = 0;
+    result[2] = 0;
+    SPI.beginTransaction(adc_settings);
+    digitalWrite(_cs, LOW);
+    SPI.transfer(result, 3);
+    digitalWrite(_cs, HIGH);
+    SPI.endTransaction();
+}
+
+// Get conversion data for a particular channel.
+// If the channel we're reading is NOT channel 0, then we need
+// to combine all of the channel results onto line 0 so we can access them.
+// (Note: with the current implementation, the transfer time slows by a factor of 8.)
 uint32_t AD7606::GetConversionData(uint8_t channel) {
     if (!ADCMode) {
         ADCModeEnable();
@@ -241,8 +259,7 @@ uint32_t AD7606::GetConversionData(uint8_t channel) {
     uint32_t result = 0;
     uint8_t upper, middle, lower;
     
-    /*** Below: FASTER VERSION OF TRANSFER. Not tested yet.
-    ***/
+    /*** Below: SLIGHTLY FASTER VERSION OF TRANSFER. Not tested yet. ***/
     // How many bytes we need to receive over SPI. If the ADC outputs 1 channel
     // per line, then we only need 3 bytes.
     /*
@@ -270,10 +287,9 @@ uint32_t AD7606::GetConversionData(uint8_t channel) {
     */
     
     /*** Below: SLOW VERSION OF TRANSFER. ***/
-    
     // Transfer each channel using 3 bytes. This works because
     // flipping the chip select pin causes the ADC to start over
-    // with the channel it was on.
+    // with the channel it was sending.
     
     uint8_t total_transfer_num = 1; // How many channels we'll need to read from the line
     if (dout_format == DOUTX1) {
@@ -294,7 +310,7 @@ uint32_t AD7606::GetConversionData(uint8_t channel) {
     SPI.endTransaction();
     result = adc_reading[channel];
     
-    /** Below: Original version, assuming only 1 channel per line **/
+    /** Below: Original version, only reads channel 1 **/
     /*
     SPI.beginTransaction(adc_settings);
     digitalWrite(_cs, LOW);
