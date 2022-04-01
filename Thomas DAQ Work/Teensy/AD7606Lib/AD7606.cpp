@@ -8,9 +8,7 @@ Version 22.03.1
 #include "AD7606.h"
 
 
-//ADC symbols
 //All pages reference AD7606C-18 Data Sheet Rev A
-//Communications Register, Table 11 Summery
 
 //Read/Write bit, pg. 48
 #define READ  1 << 6
@@ -52,22 +50,22 @@ AD7606::~AD7606() { }
 
 //sets up the AD7606 SPI communication and pins 
 void AD7606::SetupAD7606(int cs, int rst, int busy, int convst, int baudrate) {
-    _cs = cs;
-    _rst = rst;
-    _busy = busy;
-    _convst = convst;
+    // Pin IDs
+    _cs = cs; // Chip select
+    _rst = rst; // Reset
+    _busy = busy; // Busy (not currently used)
+    _convst = convst; // Conversion start
     
     // Initial configuration
     status_header = ext_os_clock = dout_format = operation_mode = 0;
     
     // Keep track of what mode we're in right now. Default: ADC mode
     ADCMode = true;
-    
     diagnosticMode = false;
     
-	adc_settings = SPISettings(baudrate, MSBFIRST, SPI_MODE2);
     
-
+    adc_settings = SPISettings(baudrate, MSBFIRST, SPI_MODE2);
+    
     
     //set bit order for ADC
     // SPI.setBitOrder(_cs, MSBFIRST);
@@ -77,8 +75,9 @@ void AD7606::SetupAD7606(int cs, int rst, int busy, int convst, int baudrate) {
     // SPI.setDataMode(_cs, SPI_MODE2);
 
     //SPI.usingInterrupt(_rdy);
-
-    //pinMode(_rdy, INPUT);
+    
+    
+    // Set pin modes
     pinMode(_busy, INPUT);
     pinMode(_convst, OUTPUT);
     pinMode(_rst, OUTPUT);
@@ -146,6 +145,7 @@ void AD7606::FullReset() {
     digitalWrite(_rst, LOW);
 }
 
+// Write data to a register
 void AD7606::RegisterWrite(uint8_t reg, uint8_t data) {
     if (ADCMode) {
         RegisterModeEnable();
@@ -153,7 +153,9 @@ void AD7606::RegisterWrite(uint8_t reg, uint8_t data) {
     
     SPI.beginTransaction(adc_settings);
     digitalWrite(_cs, LOW);
+    // First byte is register ID
     SPI.transfer(reg);
+    // Second byte is data
     SPI.transfer(data);
     digitalWrite(_cs, HIGH);
     SPI.endTransaction();
@@ -161,6 +163,9 @@ void AD7606::RegisterWrite(uint8_t reg, uint8_t data) {
     ADCModeEnable();
 }
 
+// Interface check mode: the ADC will return fixed, predictable
+// values for each channel. This allows us to troubleshoot
+// the interface
 void AD7606::InterfaceCheckMode(bool enable) {
     if (ADCMode) {
         RegisterModeEnable();
@@ -185,6 +190,7 @@ void AD7606::InterfaceCheckMode(bool enable) {
     ADCModeEnable();
 }
 
+// Not tested yet...
 void AD7606::GainCalibration(uint8_t val) {
     val = val & 0x3f;
     uint8_t reg = ADDR_GAIN(1);
@@ -196,8 +202,10 @@ void AD7606::UpdateConfiguration() {
     if (ADCMode) {
         RegisterModeEnable();
     }
+    // Combine the configuration data
     uint8_t config_data = status_header | ext_os_clock | dout_format | operation_mode;
     
+    // Send data to the ADC
     SPI.beginTransaction(adc_settings);
     digitalWrite(_cs, LOW);
     SPI.transfer(ADDR_CONFIG);
@@ -228,14 +236,14 @@ void AD7606::HighSampleRate(bool enable) {
 }
 
 // Quickly get conversion data for channel 0. Assumes that
-// we are in fast mode, and returns a pointer to an array
-// containing the 3 bytes of the result.
+// we are in fast mode, and adds the data to an array in-place.
 void AD7606::GetConversionDataFast(uint8_t (& result)[3]) {
     result[0] = 0;
     result[1] = 0;
     result[2] = 0;
     SPI.beginTransaction(adc_settings);
     digitalWrite(_cs, LOW);
+    // Read the conversion result into the array
     SPI.transfer(result, 3);
     digitalWrite(_cs, HIGH);
     SPI.endTransaction();

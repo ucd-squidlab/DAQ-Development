@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-""" daq.py - 22.03.5
+""" daq.py
 
 A module containing basic DAQ methods:
     - Setting a voltage on a DAC channel
@@ -9,7 +9,7 @@ A module containing basic DAQ methods:
     
 Also some more advanced methods:
     - SimpleRamp
-    - FancyRamp
+    - Ramp2D
     - 
 
 Created on Fri Mar  4 11:19:53 2022
@@ -114,7 +114,13 @@ def _WaitForSerial(timeout=0):
     return buff
 
 # Set the voltage on the DAQ.
-# wait: How long to wait for a completion alert
+# wait: How long to wait for a completion alert.
+# 
+# The Teensy will optionally send a response code after the
+# voltage has been updated on the DAC. This is useful if the voltage
+# slew rate has been capped, because voltage updates will not be
+# instantaneous so the host computer may want to be alerted after
+# the process is complete.
 def SetDACVoltage(channel, voltage, wait=0):
     # print("V={}, ch={}".format(voltage, channel))
     #write serial data, forcing MSB first order
@@ -145,7 +151,7 @@ def SetDACVoltage(channel, voltage, wait=0):
 def StartADCConversion():
     global ser
     
-    #write serial data, forcing MSB first order
+    # Send command in a 16-byte packet
     data = bytearray(16)
     data[0] = bytes([functionCodes["BEGINADC"] << 4])[0]
     ser.write(data)
@@ -158,11 +164,14 @@ def GetADCResult(channel):
     data[0] = functionCodes["GETADC"] << 4 | int(channel)
     ser.write(data)
     
+    # Voltage
     v = None
     
-    # Wait for the response...
+    # Get the response...
     buff = _WaitForSerial(timeout=0.05)
     
+    # The response will come back in 3 bytes. Combine
+    # these bytes into v
     if (len(buff) >= 3):
         # data sent from Arduino is MSB first
         v = Twos2Float(buff[0] << 16 | buff[1] << 8 | buff[2])
@@ -170,32 +179,45 @@ def GetADCResult(channel):
     return v
 
 # Start conversion and read result.
-# `Channel` may be an array or a scalar.
+# `channel` may be an array or a scalar.
 # If an array, readings will be taken from multiple channels.
 def ReadADC(channel):
     StartADCConversion()
+    # Check whether `channel` is an array by looking for the
+    # length attribute
     if (hasattr(channel, "__len__")):
+        # If `channel` is an array...
         v = []
+        # For each channel, get the voltage
         for c in channel:
             v.append(GetADCResult(c))
     else:
+        # If `channel` is a scalar...
+        # Get the voltage
         v = GetADCResult(channel)
     return v
 
 
 # Initiate a fast sample
 # Defaults:
-# Time between samples = 10 us
+# dmicro = Time between samples = 10 us
+# count = 400 samples
 # (Total time = 4 ms)
 def StartFastSample(dmicro=10, count=400):
+    # First get rid of any serial stuff that's hanging around
     ser.flushInput()
     ser.flushOutput()
+    
+    # Prepare the command packet
     data = bytearray(16)
     data[0] = functionCodes["STARTFAST"] << 4
-    data[1] = dmicro & 0xff
+    data[1] = dmicro & 0xff # Time between samples
+    # Number of samples (split into 3 bytes)
     data[2] = (count >> 16) & 0xff
     data[3] = (count >> 8) & 0xff
     data[4] = (count) & 0xff
+    
+    # Send command packet
     ser.write(data)
 
 # Collect the fast sample results
@@ -204,22 +226,27 @@ def _GetFastSampleData(timeout=1):
     ser.flushInput()
     ser.flushOutput()
     
-    # Send command to get data back
+    # Send command packet to request data
     data = bytearray(16)
     data[0] = functionCodes["GETFASTRESULT"] << 4
     ser.write(data)
     
     # Wait for response
     result = _WaitForSerial(timeout=timeout)
-    val = int(len(result)/3)*3
+    
+    # Process the result
+    val = int(len(result)/3)*3 # Find the nearest multiple of 3
     result = result[:val]
     if (len(result) > 3):
         result = np.array(list(result))
+        # Combine every 3 elements into a single value
         result = (result[0::3] << 16) + (result[1::3] << 8) + result[2::3]
+        # Convert each value from 2's complement into an ordinary value
         result = Twos2Float(result)
     return result
 
 # Collect the fast sample results
+# timeout: How long to wait before giving up
 # count: expected number of samples
 # max_retries: How many times to re-request missing data
 def GetFastSampleResult(timeout=1, count=0, max_retries=5):
@@ -265,22 +292,40 @@ def GetDither(ch_out1, ch_out2, ch_in, vout1, vout2, d1, d2, settle=0):
     
     return results;
 
-# Steps: how many parts to divide the range into. Min: 1
-# A value of 1 will result in a total of two measurements, one at the top
-# and the other at the bottom of the range
+# Ramp the voltage from startV to endV and read an input voltage
+# after each step.
+# outchannel: Channel on which to change the voltage
+# inchannel: channel(s) to read the voltage on (may be scalar or array)
+# startV: Start voltage for outchannel
+# endV: End voltage for outchannel
+# steps: how many parts to divide the range into. Min: 1
+#   A value of 1 will result in a total of two measurements, one at the top
+#   and the other at the bottom of the range.
 # settle (seconds): wait time after each step before taking a measurement
+#
+# Returns: a 1D list
 def SimpleRamp(outchannel, inchannel, startV, endV, steps, settle=0):
+    # Difference in voltage for each step
     deltaV = (endV - startV)/steps
+    # Current voltage
     voltage = startV
+    # Voltage readings
     results = []
+    
+    # Loop through the voltages.
     # Add 1 to to steps so that the ending value is included
     for i in range(steps+1):
+        # Next output voltage
         voltage = startV + i*deltaV
         #print("Output: {}".format(voltage))
         success = SetDACVoltage(outchannel, voltage, wait=0)
+        
         if (success == 0):
+            # Wait for a bit...
             time.sleep(settle)
+            # Read the voltage(s) from inchannel
             v = ReadADC(inchannel)
+            # Add voltage(s) to the results array
             results.append(v)
         elif (success == -5):
             print("DAQ Not Responding")
@@ -305,9 +350,21 @@ def SimpleRamp(outchannel, inchannel, startV, endV, steps, settle=0):
 #     return results
 
 
-# ch_out1: Slow
-# ch_out2: Fast
-def FancyRamp(ch_out1, ch_out2, ch_in, limits1, limits2, steps1, steps2,
+
+
+# Ramp function with two output channels.
+# ch_out1: Slow-changing channel
+# ch_out2: Fast-changing channel
+# ch_in: Which channel to measure voltage. This can be an array of channels.
+# limits1: [start, end] voltage range for ch_out1
+# limits2: [start, end] voltage range for ch_out2
+# step1, steps2s: how many parts to divide the ranges into. Min: 1
+#   A value of 1 will result in a total of two measurements, one at the top
+#   and the other at the bottom of the range.
+# settle (seconds): wait time after each step before taking a measurement
+#
+# Returns: a 2D NumPy array
+def Ramp2D(ch_out1, ch_out2, ch_in, limits1, limits2, steps1, steps2,
               settle=0):
     # Initialization...
     results = np.empty((0, steps2+1), float)
@@ -326,7 +383,16 @@ def FancyRamp(ch_out1, ch_out2, ch_in, limits1, limits2, steps1, steps2,
     return results
 
 
-# Incomplete.
+# 2D ramp function which takes a dither at each point.
+# ch_out: [ch1, ch2] Channels on which to set the output voltage
+# ch_in: [ch1, ch2] Channels on which to measure a voltage at each point
+# limits: [[start1, end1], [start2, end2]] Voltage ranges for the out channels
+# steps: [steps1, steps2] Number of intervals for each range
+#    A value of 1 will result in a total of two measurements, one at the top
+#    and the other at the bottom of the range.
+# d1: Dither size for channel 1, in volts
+# d2: Dither size for channel 2, in volts
+# settle (seconds): wait time after each step before taking a measurement
 def DitherRamp(ch_out, ch_in, limits, steps, d1=0.01, d2=0.01, settle=0):
     # Prepare an empty array to hold data
     # Each element will be a list of 5 values, so we need to specify
@@ -343,13 +409,14 @@ def DitherRamp(ch_out, ch_in, limits, steps, d1=0.01, d2=0.01, settle=0):
                 ch_out[0], ch_out[1], ch_in, v1, v2, d1, d2, settle=settle))
         # Convert data to NumPy array
         nextRow[:] = nextRowArray
+        # Add the data as a new row in the results array
         results = np.vstack((results, nextRow))
         
     return results
             
 
     
-# Take an FFT with averaging.
+# Take an FFT with averaging. The units of the result: magnitude
 # The averaging works by taking several overlapping sample ranges,
 # computing the FFT for each one, and averaging the results.
 # For the FFT function from the daq module, we need to specify:
@@ -359,6 +426,10 @@ def DitherRamp(ch_out, ch_in, limits, steps, d1=0.01, d2=0.01, settle=0):
 # - offset_factor: the offset for each overlapping sample range
 #                  (0 = complete overlap, 1 = no overlap)
 # - dmicro: Delay between samples, in microseconds
+#
+# TODO: Rewrite this function to take the total number of samples as an
+# argument, instead of the number of averages. That would make more sense.
+# E.g: GetFFT(totalsamples, fftsize, offsetfactor=0.1, dimicro=10)
 def GetFFT(size, avgnum, offset_factor=0.1, dmicro=10):
     global maxsamples
     
@@ -371,6 +442,7 @@ def GetFFT(size, avgnum, offset_factor=0.1, dmicro=10):
               Decreasing FFT size to {maxsamples}...""")
         size = maxsamples
     
+    # Again, make sure we won't go over the 100,000 sample limit.
     max_avgnum = int((maxsamples-size)/offsetnum) + 1
     if (avgnum > max_avgnum):
         print(f"""Warning: Averaging number requires too many samples.
@@ -381,12 +453,30 @@ def GetFFT(size, avgnum, offset_factor=0.1, dmicro=10):
     # Total number of samples we'll take
     samples = size + (avgnum-1)*offsetnum
     
+    # Start a fast sample
     StartFastSample(count=samples, dmicro=dmicro)
+    # Initialize the fft array with zeros
     fft = np.zeros(int(size/2)+1)
-    data = GetFastSampleResult(count=2)
+    
+    # Collect the fast sample result. "count" is max number of attempts
+    # if the data is missing some values
+    data = GetFastSampleResult(count=5)
+    
+    if (len(data) < samples):
+        print("Some data lost during transmit...")
+    
+    # Select a bunch of subsets of the data, compute an FFT,
+    # and add it to the average
     for i in range(avgnum):
+        # Compute FFT
         fft_sample = np.fft.rfft(data[offsetnum*i:size+offsetnum*i])
         # fft_sample = fft_sample * np.conjugate(fft_sample)
+        # Take magnitude of FFT
         fft_sample = np.abs(fft_sample)
+        # Convert to amplitude spectrum: divide by length of dataset
+        fft_sample = fft_sample/size
+        # Add to average
         fft = fft + fft_sample/avgnum
+        
+    # TODO: Calculate a frequency array and return that too
     return fft

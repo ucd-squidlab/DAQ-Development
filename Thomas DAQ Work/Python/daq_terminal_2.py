@@ -1,4 +1,4 @@
-# Version 22.03.6
+# Version 22.04.2
 
 # This is just a terminal interface for accessing the DAQ functions
 # from daq.py
@@ -53,7 +53,7 @@ def StartRamp(args):
     return results
 
 # start1, end1, start2, end2, step1, step2
-def StartFancyRamp(args):
+def StartRamp2D(args):
     if (len(args) < 7):
         print("Missing arguments.")
         return
@@ -62,7 +62,7 @@ def StartFancyRamp(args):
     v1 = np.linspace(args[0], args[1], args[4]+1)
     v2 = np.linspace(args[2], args[3], args[5]+1)
     X, Y = np.meshgrid(v2, v1)
-    results = daq.FancyRamp(0, 1, 0,
+    results = daq.Ramp2D(0, 1, 0,
                             [args[0], args[1]], [args[2], args[3]],
                             args[4], args[5],
                             settle=0)
@@ -91,43 +91,43 @@ def GetFastSample(args):
     plt.show()
     return
 
-def GetFFT(args):
-    size = 800
-    count = 800
-    offset = 80
-    dmicro = 10
-    # dmicro = int(args[1])
+# def GetFFT_old(args):
+#     size = 800
+#     count = 800
+#     offset = 80
+#     dmicro = 10
+#     # dmicro = int(args[1])
     
-    repeat = 2
+#     repeat = 2
     
     
-    fft = np.zeros(int(size/2)+1)
-    total_samples = size+(count-1)*offset
-    daq.StartFastSample(dmicro=dmicro, count=total_samples)
+#     fft = np.zeros(int(size/2)+1)
+#     total_samples = size+(count-1)*offset
+#     daq.StartFastSample(dmicro=dmicro, count=total_samples)
     
-    for r in range(repeat):
-        data = daq.GetFastSampleResult(timeout=1)
-        daq.StartFastSample(dmicro=dmicro, count=size+(count-1)*offset)
-        for i in range(count):
-            fft_sample = np.fft.rfft(data[offset*i:size+offset*i])
-            # fft_sample = fft_sample * np.conjugate(fft_sample)
-            fft_sample = np.abs(fft_sample)
-            fft = fft + fft_sample/(count*repeat)
-        print(len(fft))
+#     for r in range(repeat):
+#         data = daq.GetFastSampleResult(timeout=1, count=3)
+#         daq.StartFastSample(dmicro=dmicro, count=size+(count-1)*offset)
+#         for i in range(count):
+#             fft_sample = np.fft.rfft(data[offset*i:size+offset*i])
+#             # fft_sample = fft_sample * np.conjugate(fft_sample)
+#             fft_sample = np.abs(fft_sample)
+#             fft = fft + fft_sample/(count*repeat)
+#         print(len(fft))
         
-    T = size*dmicro*1e-6
-    freq = np.array(range(int(size/2)+1)) / T
+#     T = size*dmicro*1e-6
+#     freq = np.array(range(int(size/2)+1)) / T
     
-    fig = plt.figure()
-    ax = fig.add_subplot()
-    ax.plot(freq[4:int(len(fft))], fft[4:int(len(fft))])
-    ax.set_xscale('log')
-    ax.set_yscale('log')
-    plt.show()
-    return
+#     fig = plt.figure()
+#     ax = fig.add_subplot()
+#     ax.plot(freq[4:int(len(fft))], fft[4:int(len(fft))])
+#     ax.set_xscale('log')
+#     ax.set_yscale('log')
+#     plt.show()
+#     return
 
 
-def GetFFT2(args):
+def GetFFT(args):
     # The FFT function from the daq module uses averaging for the FFTs.
     # The averaging works by taking several overlapping sample ranges,
     # computing the FFT for each one, and averaging the results.
@@ -143,10 +143,10 @@ def GetFFT2(args):
     avgnum = 800
     offset_factor = 0.125
     
-    dmicro = 10
+    dmicro = 6
     
     # We can repeat this process to get around the upper limit
-    repeat = 8
+    repeat = 5
     
     fft = np.zeros(int(size/2)+1)
     
@@ -164,12 +164,12 @@ def GetFFT2(args):
     #        f = n / T
     # where T is the total sampling time
     T = size*dmicro*1e-6
-    freq = np.array(range(int(size/2)+1)) / T
+    freq = np.array(range(len(fft))) / T
     
     # Plot the FFT
     fig = plt.figure()
     ax = fig.add_subplot()
-    ax.plot(freq[4:int(len(fft))], fft[4:int(len(fft))])
+    ax.plot(freq[4:], fft[4:])
     ax.set_xscale('log')
     ax.set_yscale('log')
     plt.show()
@@ -203,7 +203,7 @@ def StartDitherRamp(args):
     print(X)
     print(Y)
     
-    fig = plt.figure()
+    plt.figure()
     ax = plt.axes(projection='3d')
     ax.plot_wireframe(X, Y, select_data)
     plt.show()
@@ -223,11 +223,11 @@ input_dictionary = {
     "setdac" : SetDAC,
     "readadc" : ReadADC,
     "ramp": StartRamp,
-    "fancy": StartFancyRamp,
+    "ramp2d": StartRamp2D,
     "ditherramp": StartDitherRamp,
     "fast": GetFastSample,
     "fft": GetFFT,
-    "fft2": GetFFT2
+    # "fftold": GetFFT_old
     }
 
 
