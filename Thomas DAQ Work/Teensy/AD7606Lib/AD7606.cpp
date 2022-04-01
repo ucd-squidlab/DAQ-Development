@@ -242,18 +242,24 @@ void AD7606::GetConversionDataFast(uint8_t (& result)[3]) {
 }
 
 // Get conversion data for a particular channel.
-// If the channel we're reading is NOT channel 0, then we need
-// to combine all of the channel results onto line 0 so we can access them.
+// If the channel we're reading is NOT channel 0, then we need to
+// combine all of the channel results onto line 0 so we can access them.
 // (Note: with the current implementation, the transfer time slows by a factor of 8.)
+// TODO: Modify this so that all of the results are returned. Or
+// maybe take an array of channels, and modify the array in-place
+// with the channel conversion results.
 uint32_t AD7606::GetConversionData(uint8_t channel) {
     if (!ADCMode) {
         ADCModeEnable();
     }
     
+    // If the channel is not channel 0, disable the high sample rate (this
+    // will combine all of the channel results on line 0 so we can access them).
     if (channel > 0 && dout_format != DOUTX1) {
         HighSampleRate(false);
     }
     
+    // The adc_reading array contains the result for different channels. Reset it to zero
     memset(adc_reading, 0, sizeof(adc_reading));
     
     uint32_t result = 0;
@@ -303,11 +309,13 @@ uint32_t AD7606::GetConversionData(uint8_t channel) {
         upper = SPI.transfer(0);
         middle = SPI.transfer(0);
         lower = SPI.transfer(0);
-        // If this is the channel we're interested in, save it.
+        // Save the result for this channel
         adc_reading[i] = ((upper&0xff)<<16 | (middle&0xff) << 8 | (lower&0xff));
         digitalWrite(_cs, HIGH);
     }
     SPI.endTransaction();
+    
+    // Select the channel of interest
     result = adc_reading[channel];
     
     /** Below: Original version, only reads channel 1 **/

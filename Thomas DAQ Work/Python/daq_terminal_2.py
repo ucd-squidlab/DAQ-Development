@@ -1,5 +1,8 @@
 # Version 22.03.6
 
+# This is just a terminal interface for accessing the DAQ functions
+# from daq.py
+
 import matplotlib.pyplot as plt
 import time
 import numpy as np
@@ -49,6 +52,7 @@ def StartRamp(args):
     np.savetxt("output{}.csv".format(int(time.time()%60)), results, delimiter=",")
     return results
 
+# start1, end1, start2, end2, step1, step2
 def StartFancyRamp(args):
     if (len(args) < 7):
         print("Missing arguments.")
@@ -58,24 +62,29 @@ def StartFancyRamp(args):
     v1 = np.linspace(args[0], args[1], args[4]+1)
     v2 = np.linspace(args[2], args[3], args[5]+1)
     X, Y = np.meshgrid(v2, v1)
-    results = daq.FancyRamp(0, 1, 0, [args[0], args[1]], [args[2], args[3]], args[4], args[5], 
-                        settle=0)
+    results = daq.FancyRamp(0, 1, 0,
+                            [args[0], args[1]], [args[2], args[3]],
+                            args[4], args[5],
+                            settle=0)
     plt.figure()
     plt.plot(v2, results[0])
-    plt.show()
     
     plt.figure()
     ax = plt.axes(projection='3d')
     ax.plot_wireframe(X, Y, results)
+    plt.show()
     return results
 
 
 def GetFastSample(args):
+    dmicro = 5
+    count = 50000
     print("Initializing...")
-    daq.StartFastSample(count=65000)
+    daq.StartFastSample(dmicro=dmicro, count=count)
     print("Started.")
     print(" Collecting data...")
-    result = daq.GetFastSampleResult(timeout=3)
+    time.sleep(count*dmicro*1e-6+0.001)
+    result = daq.GetFastSampleResult(timeout=2, count=count)
     print(len(result))
     plt.figure()
     plt.plot(range(len(result)), result)
@@ -84,18 +93,20 @@ def GetFastSample(args):
 
 def GetFFT(args):
     size = 800
-    count = 200
-    offset = 200
-    dmicro = int(args[1])
+    count = 800
+    offset = 80
+    dmicro = 10
+    # dmicro = int(args[1])
     
-    repeat = 4
+    repeat = 2
     
     
     fft = np.zeros(int(size/2)+1)
-    daq.StartFastSample(dmicro=dmicro, count=size+(count-1)*offset)
+    total_samples = size+(count-1)*offset
+    daq.StartFastSample(dmicro=dmicro, count=total_samples)
     
     for r in range(repeat):
-        data = daq.GetFastSampleResult(timeout=10)
+        data = daq.GetFastSampleResult(timeout=1)
         daq.StartFastSample(dmicro=dmicro, count=size+(count-1)*offset)
         for i in range(count):
             fft_sample = np.fft.rfft(data[offset*i:size+offset*i])
@@ -129,18 +140,19 @@ def GetFFT2(args):
     # - dmicro: Delay between samples, in microseconds
     
     size = 800
-    avgnum = 50
+    avgnum = 800
     offset_factor = 0.125
     
     dmicro = 10
     
     # We can repeat this process to get around the upper limit
-    repeat = 3
+    repeat = 8
     
     fft = np.zeros(int(size/2)+1)
     
     # Take the FFTs and average them
     for r in range(repeat):
+        print(r)
         fft_sample = daq.GetFFT(size, avgnum,
                                 dmicro=dmicro, offset_factor=offset_factor)
         fft = fft + fft_sample/repeat
@@ -173,20 +185,28 @@ def StartDitherRamp(args):
     ch_out = [0, 1]
     ch_in = 0
     limits = [(0, 10), (0, 10)]
-    steps = [10, 10]
+    steps = [4, 4]
+    
+    # Get a 2-dimensional array. Each element is a list of length 5
     results = daq.DitherRamp(ch_out, ch_in, limits, steps)
-    # Pull out the middle item from each tuple
-    select_data = [[a[3] for a in b] for b in results]
+    
+    # Pull out the middle item from each list
+    select_data = [[a[2] for a in b] for b in results]
     select_data = np.array(select_data)
     
-    v1 = np.linspace(limits[0][0], limits[0][1], steps[0])
-    v2 = np.linspace(limits[1][0], limits[1][1], steps[1])
+    v1 = np.linspace(limits[0][0], limits[0][1], steps[0]+1)
+    v2 = np.linspace(limits[1][0], limits[1][1], steps[1]+1)
     
     X, Y = np.meshgrid(v2, v1)
+    print(np.shape(select_data))
+    print(select_data)
+    print(X)
+    print(Y)
     
-    plt.figure()
+    fig = plt.figure()
     ax = plt.axes(projection='3d')
     ax.plot_wireframe(X, Y, select_data)
+    plt.show()
     
     return results
     
@@ -214,7 +234,7 @@ input_dictionary = {
 results = []
 
 def main():
-    daq.setup("COM7", baudrate=115200)
+    daq.setup(port="COM7", baudrate=115200)
     global should_close
     
     global results;
@@ -223,6 +243,7 @@ def main():
     daq.SetDACVoltage(0, 0, wait=2)
     daq.SetDACVoltage(1, 0, wait=2)
     # should_close = True
+    
 
     while(should_close != True):
         #wait for user input 
