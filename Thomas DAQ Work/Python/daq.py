@@ -29,6 +29,14 @@ ser = serial.Serial()
 # Maximum number of samples for continuous sampling
 maxsamples = 100000
 
+# Defaut max time to wait when setting the voltage on a channel.
+# This is ONLY used by the GetPoint function.
+dac_timeout = [0.1, 0, 0, 0]
+
+# Current voltage output for the DAC
+dac_values = [None, None, None, None]
+
+
 # DAQ serial function codes
 functionCodes = {
     "SETDAC": 0,
@@ -91,14 +99,22 @@ def Twos2Float(i):
 # an additional factor x of the timeout period and then check for
 # more data. This repeats until nothing else is sent.
 def _WaitForSerial(timeout=0):
+    # If the data is split into multiple packets,
+    # this is the time to wait between packets
+    # (a fraction of `timeout`)
     x = 0.3
+    
+    # Keep track of the time
     starttime = time.time()
+    
+    # Bytestring to hold data
     buff = b""
     
     # Wait for the data to come, up to a maximum of `timeout` seconds
     while ser.in_waiting == 0:
-        time.sleep(timeout*0.001)
+        time.sleep(timeout*0.001) # This might not be necessary
         if time.time() - starttime > timeout:
+            # We've reached the timeout
             return b""
         
     # Keep reading data until nothing else is sent
@@ -121,9 +137,31 @@ def _WaitForSerial(timeout=0):
 # slew rate has been capped, because voltage updates will not be
 # instantaneous so the host computer may want to be alerted after
 # the process is complete.
-def SetDACVoltage(channel, voltage, wait=0):
+#
+# channel: Which channel to set the voltage for
+# voltage: New output voltage for this channel
+# wait: Maximum wait time to confirm that the voltage change is complete.
+#       If nonzero, then the function asks the DAQ to send an alert
+#       when the voltage update is complete.
+#       This is useful if the voltage slew rate has been capped, because
+#       voltage updates will not be instantaneous and we may want to be
+#       alerted when the update is complete.
+# force: Whether to force the command. The module keeps track of the current
+#       state of the DAC; if force=False and the voltage is already set to
+#       the desired value, the function will do nothing. If force=True then
+#       the function will send the packet no matter what the current state is.
+# 
+# Returns: 0 for success
+def SetDACVoltage(channel, voltage, wait=0, force=False):
     # print("V={}, ch={}".format(voltage, channel))
-    #write serial data, forcing MSB first order
+    
+    if (dac_values[channel] == voltage and not force):
+        return 0
+    
+    # Flush input and output
+    ser.flushInput()
+    ser.flushOutput()
+    
     # First byte: function code and channel
     data = bytes([functionCodes["SETDAC"] << 4 | int(channel)])
     # Next two bytes: Voltage
@@ -139,11 +177,21 @@ def SetDACVoltage(channel, voltage, wait=0):
     # Wait for a completion alert (if we need to)
     if (wait>0):
         # Get response code
-        response = _WaitForSerial(wait)
+        response = _WaitForSerial(timeout=wait)
         # If the response is empty - error!
         if (len(response) == 0):
-            return -5;
-        response_code = response[0]
+            response_code -5;
+        else:
+            response_code = response[0]
+    
+    # Only update the stored DAC voltage if the voltage change was successful
+    # (or is presumed successful).
+    # If unsuccessful, we have no idea what the output voltage is.
+    if (response_code == 0):
+        dac_values[channel] = voltage # Save the voltage
+    else:
+        dac_values[channel] = None # Not sure what the voltage is...
+        
     return response_code
 
 
@@ -158,7 +206,11 @@ def StartADCConversion():
     return
 
 # Get result for the last ADC conversion
-def GetADCResult(channel):
+def GetADCResult(channel, timeout=0.05):
+    # Clear the queue (just in case there's anything left over there)
+    ser.flushInput()
+    ser.flushOutput()
+    
     # Send command 
     data = bytearray(16)
     data[0] = functionCodes["GETADC"] << 4 | int(channel)
@@ -168,7 +220,7 @@ def GetADCResult(channel):
     v = None
     
     # Get the response...
-    buff = _WaitForSerial(timeout=0.05)
+    buff = _WaitForSerial(timeout=timeout)
     
     # The response will come back in 3 bytes. Combine
     # these bytes into v
@@ -259,17 +311,39 @@ def GetFastSampleResult(timeout=1, count=0, max_retries=5):
     return result
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Set an output voltage on one or more DAC channels and
 # get a reading from one or more ADC channels
 def GetPoint(ch_out, v_out, ch_in, settle=0):
     if (hasattr(ch_out, "__len__")):
         for i in range(len(ch_out)):
-            SetDACVoltage(ch_out[i], v_out[i])
+            # Maximum time to wait for confirmation
+            wait = dac_timeout[ch_out[i]]
+            SetDACVoltage(ch_out[i], v_out[i], wait=wait)
     else:
-        SetDACVoltage(ch_out, v_out)
+        wait = dac_timeout[ch_out]
+        SetDACVoltage(ch_out, v_out, wait=wait)
+    # Settle time
     time.sleep(settle)
+    # Read and return the voltages from the ADC
     return ReadADC(ch_in)
-
 
 
 # Take a set of measurements around a point as shown below:
@@ -384,7 +458,8 @@ def Ramp2D(ch_out1, ch_out2, ch_in, limits1, limits2, steps1, steps2,
 
 
 # 2D ramp function which takes a dither at each point.
-# ch_out: [ch1, ch2] Channels on which to set the output voltage
+# ch_out: [ch1, ch2] Channels on which to set the output voltage.
+#    Channel ch1 will be the fast sweep
 # ch_in: [ch1, ch2] Channels on which to measure a voltage at each point
 # limits: [[start1, end1], [start2, end2]] Voltage ranges for the out channels
 # steps: [steps1, steps2] Number of intervals for each range

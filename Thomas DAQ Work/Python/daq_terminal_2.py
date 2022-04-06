@@ -1,4 +1,4 @@
-# Version 22.04.2
+# Version 22.04.3
 
 # This is just a terminal interface for accessing the DAQ functions
 # from daq.py
@@ -185,7 +185,7 @@ def StartDitherRamp(args):
     ch_out = [0, 1]
     ch_in = 0
     limits = [(0, 10), (0, 10)]
-    steps = [4, 4]
+    steps = [7, 7]
     
     # Get a 2-dimensional array. Each element is a list of length 5
     results = daq.DitherRamp(ch_out, ch_in, limits, steps)
@@ -200,8 +200,8 @@ def StartDitherRamp(args):
     X, Y = np.meshgrid(v2, v1)
     print(np.shape(select_data))
     print(select_data)
-    print(X)
-    print(Y)
+    # print(X)
+    # print(Y)
     
     plt.figure()
     ax = plt.axes(projection='3d')
@@ -209,9 +209,6 @@ def StartDitherRamp(args):
     plt.show()
     
     return results
-    
-    
-    
 
 
 # input dictionary
