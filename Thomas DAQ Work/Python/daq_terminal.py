@@ -231,8 +231,14 @@ input_dictionary = {
 results = []
 
 def main():
-    daq.setup(port="COM8", baudrate=115200)
     global should_close
+    print("Initializing")
+    
+    
+    success = daq.setup(port="COM8", baudrate=115200)
+    if (success == -1):
+        print("Error initializing serial port.")
+        should_close = True
     
     global results;
     # results = StartFancyRamp(["", -2.5, 2.5, 0, 1, 15, 15])

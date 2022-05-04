@@ -2,15 +2,23 @@
 """ daq.py
 
 A module containing basic DAQ methods:
+    - Converting a voltage to an allowable DAC output voltage
+    - Converting a voltage range and step count to allowable values
     - Setting a voltage on a DAC channel
     - Beginning an ADC conversion
     - Reading a conversion result
     - Beginning a conversion and then reading result
+    - Starting a fast sample
+    - Collecting results for fast sample
+    
     
 Also some more advanced methods:
+    - GetPoint
+    - GetDither
     - SimpleRamp
     - Ramp2D
-    - 
+    - DitherRamp
+    - GetFFT
 
 Created on Fri Mar  4 11:19:53 2022
 
@@ -113,7 +121,9 @@ def ConvertVoltageDAC(v):
     return v
 
 # Convert a voltage range into evenly spaced steps so that each step
-# coincides with one of the DAC's possible outputs
+# coincides with one of the DAC's possible outputs.
+# The number of steps represents the number of parts that the range is
+# divided into. So the number of samples = the number of steps + 1.
 def ConvertRangeDAC(startV, endV, steps):
     # Pick a start voltage that coincides with an allowed DAC output
     startV = ConvertVoltageDAC(startV)
