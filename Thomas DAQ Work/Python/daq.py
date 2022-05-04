@@ -26,6 +26,11 @@ import numpy as np
 # Initialize serial object
 ser = serial.Serial()
 
+# Info about the resolution of the DAC
+DACVref = 5
+DACRange = 2*DACVref*(32767/32768)
+DACLSB = 2*DACVref/32768
+
 # Maximum number of samples for continuous sampling
 maxsamples = 100000
 
@@ -74,14 +79,12 @@ def close():
 
 # Convert a floating point value to a value usable by the DAC
 def Float2DAC(f):
-    f = min(9.9995, f)
-    f = max(-9.9995, f)
+    f = ConvertVoltageDAC(f)
     return int((16384 * ((float(f)/5.0) + 2)))
 
 # Convert two's complement number from the ADC to a usable
 # floating point value
 def Twos2Float(i):
-    
     RES = 18 # Bit depth of the ADC
     FSR = 20.0 #full scale voltage range, can take 4 different values
 
@@ -92,6 +95,52 @@ def Twos2Float(i):
     # if (i & (1<<23) > 0):
     #     val -= FSR
     return val
+
+# The DAC output voltage range is not continuous, and it may be desirable
+# to convert a voltage to the nearest discrete value. The function below
+# converts a voltage so that it both falls within the range of allowable
+# output voltages, and also coincides with one of the DAC's possible
+# output voltages.
+def ConvertVoltageDAC(v):
+    # Round to the nearest LSB
+    v += DACLSB/2
+    v -= (v % DACLSB)
+    
+    # Make sure we're within the DAC range
+    v = max(-DACRange, v)
+    v = min(v, DACRange)
+    
+    return v
+
+# Convert a voltage range into evenly spaced steps so that each step
+# coincides with one of the DAC's possible outputs
+def ConvertRangeDAC(startV, endV, steps):
+    # Pick a start voltage that coincides with an allowed DAC output
+    startV = ConvertVoltageDAC(startV)
+    
+    # Limit the end voltage to the allowable range
+    endV = min(endV, DACRange)
+    
+    # Calculate the stepsize given the number of steps
+    stepsize = (endV - startV)/steps
+    
+    # Change the stepsize to the closest multiple of DACLSB
+    stepsize += DACLSB/2
+    stepsize = stepsize - (stepsize % DACLSB)
+    
+    # Make sure the stepsize is nonzero
+    stepsize = max(DACLSB, stepsize)
+    
+    # Recalculate the number of steps; round down
+    steps = int((endV - startV)/stepsize)
+    
+    # Find the end voltage using the new step size and step count
+    endV = startV + (steps * stepsize)
+    
+    return startV, endV, steps
+
+
+
 
 # Wait for the DAQ to send something over serial
 # timeout: number of seconds to wait before giving up.

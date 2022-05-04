@@ -231,7 +231,7 @@ input_dictionary = {
 results = []
 
 def main():
-    daq.setup(port="COM7", baudrate=115200)
+    daq.setup(port="COM8", baudrate=115200)
     global should_close
     
     global results;
