@@ -34,7 +34,17 @@ import numpy as np
 # Initialize serial object
 ser = serial.Serial()
 
-# Info about the resolution of the DAC
+# Info about the resolution and range of the DAC
+# ***** IMPORTANT: *********
+# The DAC does not range from -10 to +10 V!!
+# It falls within that range by a full LSB on both sides.
+# The fine gain can be adjusted to get the full range,
+# but if you do this, you'll need to update the float2DAC function.
+# Basically, when we want 10 V, we need to tell the DAC to output
+# a voltage of 9.99969 volts, and then use the fine gain to increase this
+# to 10 V. Every DAC input value would need to be scaled by a factor
+# of 9.99969/10.  Honestly, it will be safer to just deal with a range
+# from -9.99969 V to +9.99969 V.
 DACVref = 5
 DACRange = 2*DACVref*(32767/32768)
 DACLSB = 2*DACVref/32768

@@ -1,4 +1,4 @@
-/** Version 22.04.3
+/** Version 22.05.1
  * (year.month.commit#)
  * 
  * Serial commands
@@ -11,7 +11,7 @@
  * 0. Set DAC
  *    Code: 0
  *    Data[0], bits 3-0: Channel (0-4)
- *    Data[1]-Data[2]: Voltage, (-10) to (+10)
+ *    Data[1]-Data[2]: Voltage, (-10) to (+10)*
  *    Data[3]: Send completion alert (0 = no alert)
  *    
  *    Set an output voltage on the given DAC channel.
@@ -21,6 +21,9 @@
  *    slew rate has been capped, because voltage updates will not be
  *    instantaneous so the host computer may want to be alerted after
  *    the process is complete. A response code of 0 means success.
+ *    * NOTE: The actual range of the DAC is -9.99969 V to +9.99969 V.
+ *    This is off from the full 10 V by a single LSB. If the full -10 V
+ *    to +10 V range is desired, adjust the fine gain.
  * 
  * 
  * 1. Begin ADC Conversion
@@ -76,6 +79,7 @@
 //Arduino SPI library header
 #include <SPI.h>
 
+#include <math.h>
 #include <algorithm>
 
 using namespace std;
@@ -132,8 +136,28 @@ uint8_t DACStepSize = 1;
 
 
 // Current state of DAC
-// *** NOT IMPLEMENTED ***
 uint16_t DACVout[4] = {1<<15};
+
+// Encode a value using two's complement
+uint32_t TwosEncode(int val, uint8_t bits) {
+    uint32_t result;
+    if (val < 0) {
+        // Two's complement for negative numbers:
+        // Take absolute value, invert the bits, and add 1
+        result = ~(-val) + 1;
+        
+        // Mask out everything except the bits we want
+        result = result & ((1 << bits) - 1);
+    } else {
+        // Two's complement for positive numbers:
+        // No modification
+        result = val;
+        
+        // Mask out everything except the bits we want
+        result = result & ( (1 << (bits - 1)) - 1 );
+    }
+    return result;
+}
 
 void setup() {
     //begin serial communication
@@ -149,7 +173,14 @@ void setup() {
     digitalWrite(LED, HIGH);
     LEDState = true;
 
+    // Calibrate the ADC. Not tested... double-check the datasheet
     adc.GainCalibration(0x00);
+
+    // Calibrate the DAC
+    dac.FineGain(TwosEncode(26, 6), 0);
+    dac.Offset(TwosEncode(-7, 8), 0);
+    
+    // Set all channels to zero
     SetDAC(1<<15, 0);
     SetDAC(1<<15, 1);
     SetDAC(1<<15, 2);
@@ -158,20 +189,15 @@ void setup() {
 
 // Take a single sample.
 // This should be used with an IntervalTimer to get a bunch
-// of evenly-spaced samples
+// of evenly-spaced samples.
 void GetFastSample() {
   adc.StartConversion();
   
   // Wait for the conversion to finish
   delayMicroseconds(1);
   
-//  uint32_t adc_response = adc.GetConversionData(0);
-//  fast_samples[sample_count*3] = (adc_response >> 16) & 0xFF;
-//  fast_samples[sample_count*3 + 1] = (adc_response >> 8) & 0xFF;
-//  fast_samples[sample_count*3 + 2] = (adc_response) & 0xFF;
-  
   uint8_t adc_response[3] = {0};
-  // Get unprocessed conversion data and store it in adc_response
+  // Get raw ADC response and store it in adc_response
   adc.GetConversionDataFast(adc_response);
   // Transfer conversion data into a buffer
   fast_samples[sample_count*3] = adc_response[0];
@@ -195,7 +221,6 @@ void LEDToggle() {
     digitalWrite(LED, LOW);
   }
 }
-
 
 // Get the result from last conversion and send it to host over USB serial
 void GetADCResult(uint8_t channel) {
@@ -223,7 +248,10 @@ int SetDAC(uint16_t vout, uint8_t channel) {
   // If all four channels need to be set, then
   // set them individually instead of all at once
   // to make sure the max slew rate is not exceeded
-  // on any channel
+  // on any channel.
+  // Alternatively, we could find a clever method of
+  // slewing all channels simultaneously. I chose not
+  // to do that because the speed isn't necessary (yet).
   if (channel == 4) {
     SetDAC(vout, 0);
     SetDAC(vout, 1);
@@ -304,18 +332,25 @@ void loop() {
         data[0] = data[0] & 0xF;
 
         // We need to declare these outside of the switch statement.
-        // If we declare inside the switch statement, bugs happen.
+        // If we declare inside the switch statement, weird bugs happen
+        // and it'll take hours to figure out why.
         bool enable;
         unsigned char response_code;
 
         // Branch based on function code
-        // 
         switch (fnc) {                
             case 0:
+                // Set the DAC output.
+                
+                // Response code will be sent after the DAC output has been updated.
+                // This is useful if there's a maximum slew rate, because then the DAC
+                // output does not update instantaneously.
                 response_code = 0;
+                
                 // Change the voltage on the passed DAC channel to the passed voltage 
                 response_code = SetDAC((data[1] << 8) | data[2], data[0] & 0x7);
 
+                // If a response code was requested by the host computer, send the response
                 if (data[3] > 0) {
                   Serial.write(response_code);
                 }

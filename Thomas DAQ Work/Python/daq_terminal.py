@@ -1,7 +1,11 @@
-# Version 22.04.3
+# Version 22.05.1
 
 # This is just a terminal interface for accessing the DAQ functions
 # from daq.py
+#
+# Mostly, this particular program is just for testing purposes.
+# Ideally, somebody would write a separate Python program
+# with a GUI.
 
 import matplotlib.pyplot as plt
 import time
@@ -26,6 +30,7 @@ def Help(args):
     print("quit")
 
 
+# Set output for a DAC channel
 def SetDAC(args):
     #expected arguments: DAC channel(1), channel value(2)
     #function code: 0
@@ -35,6 +40,9 @@ def SetDAC(args):
     daq.SetDACVoltage(int(args[1]), float(args[2]))
     return
 
+# Start a single-channel ramp
+# Arguments:
+# startV, endV, steps
 def StartRamp(args):
     if (len(args) < 4):
         print("Missing arguments.")
@@ -52,6 +60,8 @@ def StartRamp(args):
     np.savetxt("output{}.csv".format(int(time.time()%60)), results, delimiter=",")
     return results
 
+# Start a ramp on two channels.
+# Arguments:
 # start1, end1, start2, end2, step1, step2
 def StartRamp2D(args):
     if (len(args) < 7):
@@ -75,7 +85,8 @@ def StartRamp2D(args):
     plt.show()
     return results
 
-
+# Capture a fast sample from the ADC.
+# (no arguments)
 def GetFastSample(args):
     dmicro = 5
     count = 50000
@@ -175,12 +186,16 @@ def GetFFT(args):
     plt.show()
     return
     
-
+# Read a value from the ADC
+# Arguments:
+# channel number (0-3)
 def ReadADC(args):
     v = daq.ReadADC(int(args[1]))
     print(v)
     return v
 
+# Start a "dither" ramp
+# Arguments: none
 def StartDitherRamp(args):
     ch_out = [0, 1]
     ch_in = 0

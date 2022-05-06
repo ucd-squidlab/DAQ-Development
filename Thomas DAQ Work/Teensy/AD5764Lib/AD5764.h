@@ -23,6 +23,10 @@ class AD5764 {
   //set voltage output for one of the 4 DAC channels (max output: ±10V)
   //vout: expecting pre-converted value (0-65535 Binary encoding), see AD5764 documentation.
   void SetDataRegister(uint16_t vout, uint8_t dac_channel);
+  
+  // Set the fine gain
+  void FineGain(uint8_t gain, uint8_t dac_channel);
+  void Offset(uint8_t offset, uint8_t dac_channel);
 
   private:
   int _cs, _ldac, _clr;

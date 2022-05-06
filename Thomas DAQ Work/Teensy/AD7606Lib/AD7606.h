@@ -58,6 +58,11 @@ class AD7606 {
     
     SPISettings adc_settings;
     
+    // Not used yet. One idea was to store
+    // ADC readings immediately after a conversion using the BUSY line
+    // as a trigger, and then read from this array instead of
+    // sending new SPI commands to the ADC.
+    // Another idea was to use this in the GetConversionData function.
     uint32_t adc_reading[8] {0};
 	
 };

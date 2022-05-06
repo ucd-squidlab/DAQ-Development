@@ -28,7 +28,7 @@ Version 22.03.1
 #define ADDR_GAINCH3                  0x0B
 #define ADDR_GAINCH4                  0x0C
 
-#define ADDR_GAIN(ch) (0x08+ch)
+#define ADDR_GAIN(ch) (0x09+ch)
 
 
 // Dout format: number of lines used for clocking out data via SPI.
@@ -146,6 +146,7 @@ void AD7606::FullReset() {
 }
 
 // Write data to a register
+// *** Not tested yet
 void AD7606::RegisterWrite(uint8_t reg, uint8_t data) {
     if (ADCMode) {
         RegisterModeEnable();
@@ -153,8 +154,8 @@ void AD7606::RegisterWrite(uint8_t reg, uint8_t data) {
     
     SPI.beginTransaction(adc_settings);
     digitalWrite(_cs, LOW);
-    // First byte is register ID
-    SPI.transfer(reg);
+    // First byte is action type | register ID
+    SPI.transfer(WRITE | reg);
     // Second byte is data
     SPI.transfer(data);
     digitalWrite(_cs, HIGH);
@@ -163,9 +164,22 @@ void AD7606::RegisterWrite(uint8_t reg, uint8_t data) {
     ADCModeEnable();
 }
 
+// *** Not tested yet
+// This function sets the fine gain for the ADC.
+// Currently, it looks like it's written to only change the gain for
+// channel 0.
+// Need to check datasheet and see if everything here is correct.
+void AD7606::GainCalibration(uint8_t val) {
+    // Pick only the last 6 bits of the gain value
+    val = val & 0x3f;
+    // Write to the register
+    uint8_t reg = ADDR_GAIN(0);
+    RegisterWrite(reg, val);
+}
+
 // Interface check mode: the ADC will return fixed, predictable
 // values for each channel. This allows us to troubleshoot
-// the interface
+// the interface.
 void AD7606::InterfaceCheckMode(bool enable) {
     if (ADCMode) {
         RegisterModeEnable();
@@ -181,6 +195,7 @@ void AD7606::InterfaceCheckMode(bool enable) {
     // Diagnostic register: 0x21
     uint8_t data[2] = {WRITE | 0x21, code};
     
+    // Send the new register data
     SPI.beginTransaction(adc_settings);
     digitalWrite(_cs, LOW);
     SPI.transfer(data, 2);
@@ -190,12 +205,6 @@ void AD7606::InterfaceCheckMode(bool enable) {
     ADCModeEnable();
 }
 
-// Not tested yet...
-void AD7606::GainCalibration(uint8_t val) {
-    val = val & 0x3f;
-    uint8_t reg = ADDR_GAIN(1);
-    RegisterWrite(reg, val);
-}
 
 // Update the configuration register
 void AD7606::UpdateConfiguration() {
@@ -223,27 +232,49 @@ void AD7606::StartConversion() {
     //data is ready when _busy goes low
 }
 
-// Enable high sampling rate by splitting output over all 8 doutx lines.
+// High sample rate = splitting the 8 channels over all 8 doutx lines.
+// This means that only a single channel is transmitted over a single
+// line.
+// I have not been able to find a method for reading the 8 channels
+// simultaneously on different lines. So the only reason this function
+// is useful is that it means we only need to read a single channel (24 bits)
+// from the SPI line, instead of all 8 channels.
+// But technically, this function is unnecessary. When all 8 channels are sent
+// on a single line, we could just read the first 24 bits and then stop.
+// When the next ADC conversion is complete, the ADC will start over again
+// with channel 0. So if we're interested in just channel 0, we could keep
+// the ADC in DOUTX1 mode with all 8 channels being sent on line 0. We read
+// 24 bits from line 0, then we trigger a conversion, then we read 24 more bits
+// from line 0.
+// The problem is that, if we somehow forget the result for channel 0 and need
+// to re-read that channel before starting a new conversion, then we have to
+// read channels 1-7 before we get back to channel 0. But if we can guarantee
+// that this will never happen, then we don't need to split
+// the 8 channels over different lines.
 void AD7606::HighSampleRate(bool enable) {
     if (dout_format != DOUTX8 and enable) {
+        // If we're not in fast mode already
         dout_format = DOUTX8;
         UpdateConfiguration();
     } else if (dout_format != DOUTX1 and !enable) {
+        // If we're currently in fast mode
         dout_format = DOUTX1;
         UpdateConfiguration();
     }
     ADCModeEnable();
 }
 
-// Quickly get conversion data for channel 0. Assumes that
-// we are in fast mode, and adds the data to an array in-place.
+// Quickly get conversion data for channel 0. NOTE: Assumes that
+// we are already in fast mode, and adds the data to an array in-place.
 void AD7606::GetConversionDataFast(uint8_t (& result)[3]) {
+    // Clear the array; this is necessary because a few lines later
+    // we'll be sending it over SPI, so it needs to contain only zeros
     result[0] = 0;
     result[1] = 0;
     result[2] = 0;
     SPI.beginTransaction(adc_settings);
     digitalWrite(_cs, LOW);
-    // Read the conversion result into the array
+    // Send the array over SPI and read the conversion result into the same array
     SPI.transfer(result, 3);
     digitalWrite(_cs, HIGH);
     SPI.endTransaction();
@@ -314,6 +345,7 @@ uint32_t AD7606::GetConversionData(uint8_t channel) {
     // Read the channels
     for (int i = 0; i < total_transfer_num; ++i) {
         digitalWrite(_cs, LOW);
+        // Three bytes transferred from ADC
         upper = SPI.transfer(0);
         middle = SPI.transfer(0);
         lower = SPI.transfer(0);
@@ -326,7 +358,7 @@ uint32_t AD7606::GetConversionData(uint8_t channel) {
     // Select the channel of interest
     result = adc_reading[channel];
     
-    /** Below: Original version, only reads channel 1 **/
+    /** Below: Original version, only reads channel 0 **/
     /*
     SPI.beginTransaction(adc_settings);
     digitalWrite(_cs, LOW);

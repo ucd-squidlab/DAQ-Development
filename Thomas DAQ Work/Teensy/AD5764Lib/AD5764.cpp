@@ -1,8 +1,10 @@
 #include "Arduino.h"
 #include "SPI.h"
 #include "AD5764.h"
+// **** TODO: Update DAC to use 2's complement!!! ****
+// This will make it so that the DAC powers up at 0 V instead of -10 V.
 
-//DAC symbols
+
 
 //All tables references AD5764 Data Sheet Rev F
 //Table 9: Defines for the input shift regsiter bit map, designed to be OR'd together to create a valid input for the AD5764
@@ -71,7 +73,6 @@ void AD5764::SetupAD5764(int cs, int ldac, int clr) {
 
 //sets the output on the specified DAC channel
 //the data word is a value between 0-65535 in Binary encoding
-
 void AD5764::SetDataRegister(uint16_t vout, uint8_t dac_channel) {
 	//generate DAC Input Shift Register Bit Map (24bits), Table 9 with data in binary coding (Table 7)
 	//using following bits to generate map:
@@ -87,6 +88,47 @@ void AD5764::SetDataRegister(uint16_t vout, uint8_t dac_channel) {
     
     
 	//transfer the data to the DAC
+    SPI.beginTransaction(dac_settings);
+    digitalWrite(_cs, LOW);
+	SPI.transfer(data_array, 3);
+    SPI.endTransaction();
+    digitalWrite(_cs, HIGH);
+}
+
+// Set the fine gain. Each gain step will change the output
+// voltage at -10V by 1/2 LSB.
+// The gain should be encoded using 2's complement.
+// See AD5764 datasheet for more details.
+void AD5764::FineGain(uint8_t gain, uint8_t dac_channel) {
+    // Pick only the last 6 bits of the gain value
+    gain = gain & 0x3f;
+    
+	//make an array of bytes to send in MSB first order
+	uint8_t data_array[3];
+	data_array[0] = WRITE | FINE_REG | dac_channel;
+	data_array[1] = 0;
+	data_array[2] = gain;
+    
+    // Send to the DAC
+    SPI.beginTransaction(dac_settings);
+    digitalWrite(_cs, LOW);
+	SPI.transfer(data_array, 3);
+    SPI.endTransaction();
+    digitalWrite(_cs, HIGH);
+}
+
+// Set the offset. Each offset step will shift the output
+// voltage by 1/8 LSB.
+// The offset should be encoded using 2's complement.
+// See AD5764 datasheet for more details.
+void AD5764::Offset(uint8_t offset, uint8_t dac_channel) {    
+	//make an array of bytes to send in MSB first order
+	uint8_t data_array[3];
+	data_array[0] = WRITE | OFFSET_REG | dac_channel;
+	data_array[1] = 0;
+	data_array[2] = offset;
+    
+    // Send to the DAC
     SPI.beginTransaction(dac_settings);
     digitalWrite(_cs, LOW);
 	SPI.transfer(data_array, 3);
