@@ -10,7 +10,7 @@
  * 
  * 0. Set DAC
  *    Code: 0
- *    Data[0], bits 3-0: Channel (0-4)
+ *    Data[0], bits 3-1: Channel (0-4)
  *    Data[1]-Data[2]: Voltage, (-10) to (+10)*
  *    Data[3]: Send completion alert (0 = no alert)
  *    
@@ -34,15 +34,16 @@
  *    
  * 2. Get ADC Result
  *    Code: 2
+ *    data[0], bits 4-1: Channel (0-7)
  *    
  *    Read the result of the last conversion and
- *    return result in 3 bytes over serial. The first 18 bits
- *    of the result contain the ADC reading.
+ *    send the result for the given channel in 3 bytes over serial.
+ *    The first 18 bits of the result contain the ADC reading.
  *    
  *    
  * 3. Interface Check Diagnostic Mode
  *    Code: 3
- *    Data[0], bits 4-0: 1 = enable, 0 = disable
+ *    Data[0], bits 4-1: 1 = enable, 0 = disable
  *    
  *    Enables or disables the ADC diagnostic interface check. When
  *    enabled, ADC conversions return a fixed value. This can be used to
@@ -61,7 +62,7 @@
  *    
  *    Collect a bunch of samples at a high sample rate and
  *    save in a local buffer. When sampling is complete, the
- *    data may requested using a different command.
+ *    data may be requested using a different command.
  *    
  *    
  * 6. Collect fast sample results
@@ -116,7 +117,7 @@ AD7606 adc;
 // Stuff for the fast-sampling feature
 IntervalTimer fast_sample_timer;
 byte fast_samples[300000];
-int sample_count = 0; // How many samples sent so far
+int sample_count = 0; // How many samples taken so far
 int target_count = 0; // Target number of samples
 // Whether the DAQ is actively sampling right now
 bool active_sampling = false;

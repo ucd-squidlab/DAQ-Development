@@ -341,7 +341,7 @@ def StartFastSample(dmicro=10, count=400):
     # Send command packet
     ser.write(data)
 
-# Collect the fast sample results
+# Collect the fast sample results. No error handling.
 def _GetFastSampleData(timeout=1):
     # First get rid of any serial stuff that's hanging around
     ser.flushInput()
@@ -366,7 +366,8 @@ def _GetFastSampleData(timeout=1):
         result = Twos2Float(result)
     return result
 
-# Collect the fast sample results
+# Collect the fast sample results. Checks for completeness
+# and re-requests the data if any of it is missing.
 # timeout: How long to wait before giving up
 # count: expected number of samples
 # max_retries: How many times to re-request missing data
@@ -399,7 +400,13 @@ def GetFastSampleResult(timeout=1, count=0, max_retries=5):
 
 
 # Set an output voltage on one or more DAC channels and
-# get a reading from one or more ADC channels
+# get a reading from one or more ADC channels.
+# ch_out: Output channel(s). Either a single value or an array of values.
+# v_out: the output voltage(s) for the channel(s).
+#        If ch_out is an array, v_out must also be an array.
+# ch_in: Input channel(s). Either a single value or an array of values.
+# settle: Amount of time to wait between setting the output voltage(s) and
+#        reading the input voltage(s)
 def GetPoint(ch_out, v_out, ch_in, settle=0):
     if (hasattr(ch_out, "__len__")):
         for i in range(len(ch_out)):
@@ -561,7 +568,7 @@ def DitherRamp(ch_out, ch_in, limits, steps, d1=0.01, d2=0.01, settle=0):
 
     
 # Take an FFT with averaging. The units of the result: magnitude
-# The averaging works by taking several overlapping sample ranges,
+# The averaging works by taking several overlapping subsets,
 # computing the FFT for each one, and averaging the results.
 # For the FFT function from the daq module, we need to specify:
 # - size: the number of samples for each FFT
@@ -571,9 +578,9 @@ def DitherRamp(ch_out, ch_in, limits, steps, d1=0.01, d2=0.01, settle=0):
 #                  (0 = complete overlap, 1 = no overlap)
 # - dmicro: Delay between samples, in microseconds
 #
-# TODO: Rewrite this function to take the total number of samples as an
+# TODO: Rewrite this function to take the TOTAL number of samples as an
 # argument, instead of the number of averages. That would make more sense.
-# E.g: GetFFT(totalsamples, fftsize, offsetfactor=0.1, dimicro=10)
+# E.g: GetFFT(totalsamples, subsetsize, offsetfactor=0.1, dimicro=10)
 def GetFFT(size, avgnum, offset_factor=0.1, dmicro=10):
     global maxsamples
     
