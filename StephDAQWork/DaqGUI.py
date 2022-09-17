@@ -99,8 +99,7 @@ class Ui_MainWindow(object):
 
         # Define pathInput
         # This placeholder text is unique to MY machine and will not work for when the GUI runs on the lab computers
-        self.pathInput = QtWidgets.QLineEdit(
-            self.centralwidget, placeholderText='C:\\Users\\Steph')
+        self.pathInput = QtWidgets.QLineEdit(self.centralwidget, placeholderText=os.path.expanduser('~'))
         self.pathInput.setGeometry(QtCore.QRect(110, 20, 581, 22))
         self.pathInput.setObjectName("pathInput")
 
