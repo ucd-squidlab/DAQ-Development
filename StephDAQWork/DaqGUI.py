@@ -12,7 +12,7 @@ import numpy as np
 import os
 from datetime import datetime
 from PyQt5 import QtCore, QtGui, QtWidgets
-#import daq
+import daq
 
 
 class Ui_MainWindow(object):
@@ -711,7 +711,7 @@ class Ui_MainWindow(object):
     def maxFlux(self):
         return self.toFluxInput.text()
 
-    def stepsFlux(self):
+    def fluxSteps(self):
         return self.stepsFluxInput.text()
 
     def minBias(self):
@@ -720,7 +720,7 @@ class Ui_MainWindow(object):
     def maxBias(self):
         return self.toBiasInput.text()
 
-    def stepsBias(self):
+    def biasSteps(self):
         return self.stepsBiasInput.text()
 
     def VPhi(self):

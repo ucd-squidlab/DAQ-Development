@@ -6,6 +6,7 @@ Created on Tue Sep 13 11:55:57 2022
 """
 from datetime import datetime
 import os
+import vxi11
 
 # Change the text of the button according to its clicked status
 def startStopButtonTextChange(self):
@@ -133,8 +134,74 @@ def createKalamariFile(self):
 def startStopButton_clicked(self):
     # Call the function to change the text
     startStopButtonTextChange(self)
-    createKalamariFile(self)
-    # Call the function and pass the arguments of the fromFlux and toFlux Input
-    startV, endV = convertToVolts(self, int(self.minFlux()), int(self.maxFlux()))
+    if self.startStopButton.text() == "STOP": #specifically: you are now running kalamari
+        kalamariMain(self)
 
-    #daq.ConvertRangeDAC(startV, endV, int(self.stepsFlux()))
+def kalamariMain(self):
+    #Make the data file
+    createKalamariFile(self)
+
+    #Convert flux/bias inputs to their voltages (V = IR)
+    minFluxV = self.minFlux() * self.rFlux() / 1000000
+    maxFluxV = self.maxFlux() * self.rFlux() / 1000000
+    minBiasV = self.minBias() * self.rBias() / 1000000
+    maxBiasV = self.maxBias() * self.rBias() / 1000000
+
+    #Get the array of points to use. May as well have numpy do it.
+    fluxPoints = np.linspace(minFluxV,maxFluxV,num = self.fluxSteps())
+    biasPoints = np.linspace(minBiasV,maxBiasV,num = self.biasSteps())
+
+    #Set up inner/outer loop based on curve type
+    if self.IV: #looking at this and considering it: i'm not sure I know how kalamari gets one of these.
+        innerPoints = fluxPoints
+        outerPoints = biasPoints
+    else:
+        innerPoints = biasPoints
+        outerPoints = fluxPoints
+
+    if self.noise():
+        #Establish connection with the spectrum analyzer
+        instr = vxi11.Instrument("10.20.4.3")
+        #Make sure the connection was successful
+        instr.ask("*IDN?")
+        #We don't care what it says; if the connection fails it'll throw an error.
+
+    
+    #Setup is done; just run the loops
+    for x1 in outerPoints:
+        SetDACVoltage(0,x1)
+        for x2 in innerPoints:
+            SetDACVoltage(1,x2)
+
+            #Get the data
+            voltage = ReadADC(0)
+
+            if self.dither() != 0:
+                #dither up x1
+                SetDACVoltage(0,x1 + DACLSB*self.dither())
+                ditherRight = ReadADC(0)
+                #dither down x1
+                SetDACVoltage(0,x1 - DACLSB*self.dither())
+                ditherLeft = ReadADC(0)
+                #reset x1
+                SetDACVoltage(0,x1)
+
+                #dither up x2
+                SetDACVoltage(1,x2 + DACLSB*self.dither())
+                ditherUp = ReadADC(0)
+                #dither down x2
+                SetDACVoltage(1,x2 - DACLSB*self.dither())
+                ditherDown = ReadADC(0)
+                #reset x2
+                SetDACVoltage(1,x2)
+
+                #Do some data processing to get the metrics that are actually needed
+
+            if self.noise():
+                #Ugh. whatever makes this section work i guess.
+
+            #Write the data to a file
+
+            
+
+
