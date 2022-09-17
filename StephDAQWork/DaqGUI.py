@@ -714,15 +714,6 @@ class Ui_MainWindow(object):
     def stepsFlux(self):
         return self.stepsFluxInput.text()
 
-    def tSettle(self):
-        return self.tSettleInput.text()
-
-    def NPLC(self):
-        return self.NPLCInput.text()
-
-    def range(self):
-        return self.rangeInput.text()
-
     def minBias(self):
         return self.fromBiasInput.text()
 
@@ -732,32 +723,17 @@ class Ui_MainWindow(object):
     def stepsBias(self):
         return self.stepsBiasInput.text()
 
-    def flux(self):
-        return self.fluxInput.text()
-
-    def bias(self):
-        return self.biasInput.text()
-
-    def multimeter(self):
-        return self.multimeterInput.text()
-
     def VPhi(self):
-        return self.VPhiInput.text()
+        return self.VPhiIVSlider.value() == 1
 
     def IV(self):
-        return self.IVInput.text()
+        return self.VPhiIVSlider.value() == 0
 
     def noise(self):
-        return self.noiseInput.text()
+        return self.noiseNoNoiseSlider.value() == 1
 
     def noNoise(self):
-        return self.noNoiseInput.text()
-
-    def withDerivative(self):
-        return self.withDerivativeInput.text()
-
-    def withoutDerivative(self):
-        return self.withoutDerivativeInput.text()
+        return self.noiseNoNoiseSlider.value() == 0
 
     def slope(self):
         return self.slopeInput.text()
@@ -772,46 +748,4 @@ class Ui_MainWindow(object):
         return self.gainInput.text()
 
     def dither(self):
-        return self.ditherInput.text()
-
-    def rFluxDefault(self):
-        return self.rFluxDefaultInput.text()
-
-    def rBiasDefault(self):
-        return self.rBiasDefaultInput.text()
-
-    def gainDefault(self):
-        return self.gainDefaultInput.text()
-
-    def ditherOne(self):
-        return self.ditherOneInput.text()
-
-    def ditherTwo(self):
-        return self.ditherTwoInput.text()
-
-    def startStopB(self):
-        return self.startStopButton.text()
-
-    def errorIn(self):
-        return self.errorInInput.text()
-
-    def errorOut(self):
-        return self.errorOutInput.text()
-
-    def errorInStatus(self):
-        return self.errorInStatusInput.text()
-
-    def errorInCode(self):
-        return self.errorInCodeInput.text()
-
-    def errorInSource(self):
-        return self.errorInSourceInput.text()
-
-    def errorOutStatus(self):
-        return self.errorOutStatusInput.text()
-
-    def errorOutCode(self):
-        return self.errorOutCodeInput.text()
-
-    def errorOutSource(self):
-        return self.errorOutSourceInput.text(())
+        return self.ditherSlider.value()
