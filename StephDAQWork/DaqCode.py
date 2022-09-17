@@ -147,8 +147,7 @@ def createKalamariFile(self):
     k.write("Curve Type: \n")
     # Formatting the next line
     # SOMETHING WENT TERRIBLY WRONG HERE
-    k.write(
-        "I_Flux          I_Bias          Voltage          dV/dI F(\omega)          Rd(\omega)          Sv          Si")
+    k.write("I_Flux\tI_Bias\tVoltage\tdV/dI F(\omega)\tRd(\omega)\tSv\tSi")
     # Close the file once you are done appending
     k.close()
 
@@ -159,7 +158,6 @@ def startStopButton_clicked(self):
     createKalamariFile(self)
 
     # Call the function and pass the arguments of the fromFlux and toFlux Input
-    startV, endV = convertToVolts(
-        self, int(self.fromFluxInput.text()), int(self.toFluxInput.text()))
+    startV, endV = convertToVolts(self, int(self.fromFluxInput.text()), int(self.toFluxInput.text()))
 
     #daq.ConvertRangeDAC(startV, endV, int(self.stepsFluxInput.text()))
