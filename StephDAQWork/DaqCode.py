@@ -106,10 +106,6 @@ def createKalamariFile(self):
                    " " + str(self.die()) + " " + getDate.dt_string)
     # Joining both the path and the fileName
     fullPath = os.path.join(filePath, fileName+".txt")
-    # For now I have my path directory written so that
-    # it will actually appear on my computer
-    # When this is brought to run on one of the Macs,
-    # the file will be the inputted path directory + the fileName
     k = open(fullPath, 'w')
     # Test to see if stuff is actually being written to the file
     # by writing the first line
