@@ -686,6 +686,7 @@ class Ui_MainWindow(object):
         self.errorOutSourceLabel.setText(_translate("MainWindow", "Source"))
         self.menuMain.setTitle(_translate("MainWindow", "Main"))
     
+    #listen i don't know where to put these either so i'm just dumping them here.
     def wafer(self):
         return self.waferInput.text()
 

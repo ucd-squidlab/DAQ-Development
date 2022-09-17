@@ -114,10 +114,6 @@ def createKalamariFile(self):
     # Test to see if stuff is actually being written to the file
     # by writing the first line
     k.write("Kalamari Generated Noise File\n")
-    # Close the file
-    k.close()
-    # Open it to append
-    k = open(fullPath, 'a')
     # Write the second line
     k.write("Date: " + getDate.dt_string + " Wafer-Die: " +
             self.wafer() + self.die() + " Initials: " +
