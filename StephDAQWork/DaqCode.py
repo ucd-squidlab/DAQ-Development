@@ -70,7 +70,6 @@ def convertToVolts(self, startI, endI):
 
 # Somewhere in here I think is where my toggle checks need to happen
 
-
 def graphToggle(self):
     self.VPhiIVSlider.valueChanged[1].connect(self.changeValue)
 

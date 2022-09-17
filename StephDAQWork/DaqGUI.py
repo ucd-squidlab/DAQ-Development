@@ -98,7 +98,6 @@ class Ui_MainWindow(object):
         self.waferLabelLayout.addWidget(self.pageLabel)
 
         # Define pathInput
-        # This placeholder text is unique to MY machine and will not work for when the GUI runs on the lab computers
         self.pathInput = QtWidgets.QLineEdit(self.centralwidget, placeholderText=os.path.expanduser('~'))
         self.pathInput.setGeometry(QtCore.QRect(110, 20, 581, 22))
         self.pathInput.setObjectName("pathInput")
@@ -659,27 +658,21 @@ class Ui_MainWindow(object):
         self.stepsBiasLabel.setText(_translate("MainWindow", "# Steps:"))
         self.fluxLabel.setText(_translate("MainWindow", "Flux(µAmps)"))
         self.biasLabel.setText(_translate("MainWindow", "Bias(µAmps)"))
-        self.multimeterLabel.setText(_translate(
-            "MainWindow", "Digital Multimeter Settings"))
+        self.multimeterLabel.setText(_translate( "MainWindow", "Digital Multimeter Settings"))
         self.VPhiLabel.setText(_translate("MainWindow", "VPhi"))
         self.IVLabel.setText(_translate("MainWindow", "IV"))
         self.noiseLabel.setText(_translate("MainWindow", "Noise"))
         self.noNoiseLabel.setText(_translate("MainWindow", "No Noise"))
-        self.withDerivativeLabel.setText(
-            _translate("MainWindow", "With Derivative"))
-        self.withoutDerivativeLabel.setText(
-            _translate("MainWindow", "Without Derivative"))
+        self.withDerivativeLabel.setText( _translate("MainWindow", "With Derivative"))
+        self.withoutDerivativeLabel.setText( _translate("MainWindow", "Without Derivative"))
         self.slopeLabel.setText(_translate("MainWindow", "Slope"))
         self.rFluxLabel.setText(_translate("MainWindow", "R-flux:"))
         self.rBiasLabel.setText(_translate("MainWindow", "R-Bias:"))
         self.gainLabel.setText(_translate("MainWindow", "Gain:"))
         self.ditherLabel.setText(_translate("MainWindow", "Dither:"))
-        self.rFluxDefaultLabel.setText(
-            _translate("MainWindow", "(Default: 21333)"))
-        self.rBiasDefaultLabel.setText(
-            _translate("MainWindow", "(Default: 10073)"))
-        self.gainDefaultLabel.setText(
-            _translate("MainWindow", "(Default: 98)"))
+        self.rFluxDefaultLabel.setText( _translate("MainWindow", "(Default: 21333)"))
+        self.rBiasDefaultLabel.setText( _translate("MainWindow", "(Default: 10073)"))
+        self.gainDefaultLabel.setText( _translate("MainWindow", "(Default: 98)"))
         self.ditherOneLabel.setText(_translate("MainWindow", "1"))
         self.ditherTwoLabel.setText(_translate("MainWindow", "2"))
         self.startStopButton.setText(_translate("MainWindow", "START"))
@@ -692,3 +685,135 @@ class Ui_MainWindow(object):
         self.errorOutCodeLabel.setText(_translate("MainWindow", "Code"))
         self.errorOutSourceLabel.setText(_translate("MainWindow", "Source"))
         self.menuMain.setTitle(_translate("MainWindow", "Main"))
+    
+    def wafer(self):
+        return self.waferLabel.text()
+
+    def die(self):
+        return self.dieLabel.text()
+
+    def initials(self):
+        return self.initialsLabel.text()
+
+    def book(self):
+        return self.bookLabel.text()
+
+    def page(self):
+        return self.pageLabel.text()
+
+    def path(self):
+        return self.pathLabel.text()
+
+    def fromFlux(self):
+        return self.fromFluxLabel.text()
+
+    def toFlux(self):
+        return self.toFluxLabel.text()
+
+    def stepsFlux(self):
+        return self.stepsFluxLabel.text()
+
+    def tSettle(self):
+        return self.tSettleLabel.text()
+
+    def NPLC(self):
+        return self.NPLCLabel.text()
+
+    def range(self):
+        return self.rangeLabel.text()
+
+    def fromBias(self):
+        return self.fromBiasLabel.text()
+
+    def toBias(self):
+        return self.toBiasLabel.text()
+
+    def stepsBias(self):
+        return self.stepsBiasLabel.text()
+
+    def flux(self):
+        return self.fluxLabel.text()
+
+    def bias(self):
+        return self.biasLabel.text()
+
+    def multimeter(self):
+        return self.multimeterLabel.text()
+
+    def VPhi(self):
+        return self.VPhiLabel.text()
+
+    def IV(self):
+        return self.IVLabel.text()
+
+    def noise(self):
+        return self.noiseLabel.text()
+
+    def noNoise(self):
+        return self.noNoiseLabel.text()
+
+    def withDerivative(self):
+        return self.withDerivativeLabel.text()
+
+    def withoutDerivative(self):
+        return self.withoutDerivativeLabel.text()
+
+    def slope(self):
+        return self.slopeLabel.text()
+
+    def rFlux(self):
+        return self.rFluxLabel.text()
+
+    def rBias(self):
+        return self.rBiasLabel.text()
+
+    def gain(self):
+        return self.gainLabel.text()
+
+    def dither(self):
+        return self.ditherLabel.text()
+
+    def rFluxDefault(self):
+        return self.rFluxDefaultLabel.text()
+
+    def rBiasDefault(self):
+        return self.rBiasDefaultLabel.text()
+
+    def gainDefault(self):
+        return self.gainDefaultLabel.text()
+
+    def ditherOne(self):
+        return self.ditherOneLabel.text()
+
+    def ditherTwo(self):
+        return self.ditherTwoLabel.text()
+
+    def startStopB(self):
+        return self.startStopButton.text()
+
+    def errorIn(self):
+        return self.errorInLabel.text()
+
+    def errorOut(self):
+        return self.errorOutLabel.text()
+
+    def errorInStatus(self):
+        return self.errorInStatusLabel.text()
+
+    def errorInCode(self):
+        return self.errorInCodeLabel.text()
+
+    def errorInSource(self):
+        return self.errorInSourceLabel.text()
+
+    def errorOutStatus(self):
+        return self.errorOutStatusLabel.text()
+
+    def errorOutCode(self):
+        return self.errorOutCodeLabel.text()
+
+    def errorOutSource(self):
+        return self.errorOutSourceLabel.text((self))
+
+    def
+        return self.men.text()uMainself.menuMain
