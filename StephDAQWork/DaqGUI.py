@@ -736,7 +736,7 @@ class Ui_MainWindow(object):
         return self.noiseNoNoiseSlider.value() == 0
 
     def slope(self):
-        return self.slopeInput.text()
+        return self.slopeSlider.value() == 1
 
     def rFlux(self):
         return self.rFluxInput.text()
@@ -748,4 +748,4 @@ class Ui_MainWindow(object):
         return self.gainInput.text()
 
     def dither(self):
-        return self.ditherSlider.value()
+        return self.ditherSlider.value() if self.slope() else 0

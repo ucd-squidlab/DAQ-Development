@@ -8,8 +8,6 @@ from datetime import datetime
 import os
 
 # Change the text of the button according to its clicked status
-
-
 def startStopButtonTextChange(self):
     if self.startStopButton is not None:
         text = self.startStopButton.text()
@@ -17,8 +15,6 @@ def startStopButtonTextChange(self):
 
 
 # Create a function to get the current points for the graph
-
-
 def getXPoints(self):
     # Calculate the range by subtracting the beginning value from the end value
     fluxRange = int(self.maxFlux()) - int(self.minFlux())
@@ -60,7 +56,6 @@ def getYPoints(self):
 
 # Convert the start and end points to volts to pass to ConvertRangeDAC
 
-
 def convertToVolts(self, startI, endI):
     # Multiply the start point by the resistance
     startV = startI * int(self.rFlux())
@@ -86,7 +81,6 @@ def ditherToggle(self):
     self.ditherSlider.valueChanged[1].connect(self.changeValue)
 
 # Create a function to get the current date for file purposes
-
 
 def getDate():
     # Use the method datetime.now() to get the current date and time
@@ -127,18 +121,11 @@ def createKalamariFile(self):
             self.maxBias() + " Bias Steps: " +
             self.stepsBias() + " Bias Resistance(RBias): " +
             self.rBias() + "\n")
-    # Sixth line is everything pertaining to multimeter settings.
-    # THE CODE IS ANGRY RIGHT NOW BECAUSE THE VARIABLE DITHERVALUE IS STILL
-    # COMMENTED OUT FROM ABOVE
-    # k.write("Tsettle: " + self.tSettle() + " Gain: " +
-    # self.gain() + " NPLC: " + self.NPLC() + " Range: " +
-    # self.range() + " Dither: " + ditherValue + "\n")
-    # Seventh line defines what type of graph it is
-    # I STILL HAVE NOT WRITTEN THE CODE FOR THE VPHI IV TOGGLE
-    k.write("Curve Type: \n")
+    # Sixth line mentions dither settings and the curve type
+    curveName = ("IV" if self.IV else "V\u03C6")
+    k.write("Dither: " + self.dither() + "\tCurve Type: " + curveName + "\n")
     # Formatting the next line
-    # SOMETHING WENT TERRIBLY WRONG HERE
-    k.write("I_Flux\tI_Bias\tVoltage\tdV/dI F(\omega)\tRd(\omega)\tSv\tSi")
+    k.write("I_Flux\tI_Bias\tVoltage\tdV/dI F(\u03A9)\tRd(\u03A9)\tSv\tSi")
     # Close the file once you are done appending
     k.close()
 
