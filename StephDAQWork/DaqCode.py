@@ -21,13 +21,13 @@ def startStopButtonTextChange(self):
 
 def getXPoints(self):
     # Calculate the range by subtracting the beginning value from the end value
-    fluxRange = int(self.toFluxInput.text()) - int(self.fromFluxInput.text())
+    fluxRange = int(self.maxFlux()) - int(self.minFlux())
     # Calculates the interval by dividing the range by the number of steps
-    fluxInterval = fluxRange / int(self.stepsFluxInput.text())
+    fluxInterval = fluxRange / int(self.stepsFlux())
     # Adding one sets the first step as step 0
-    stepsFluxInput = int(self.stepsFluxInput.text()) + 1
+    stepsFluxInput = int(self.stepsFlux()) + 1
     # Set start point
-    fluxStart = int(self.fromFluxInput.text())
+    fluxStart = int(self.minFlux())
     # Create an array
     xPointsArray = []
     # Append the previously made array with a for loop
@@ -42,13 +42,13 @@ def getXPoints(self):
 
 def getYPoints(self):
     # Calculate the range by subtracting the beginning value from the end value
-    biasRange = int(self.toBiasInput.text()) - int(self.fromBiasInput.text())
+    biasRange = int(self.maxBias()) - int(self.minBias())
     # Calculates the interval by dividing the range by the number of steps
-    biasInterval = biasRange / int(self.stepsBiasInput.text())
+    biasInterval = biasRange / int(self.stepsBias())
     # Adding one sets the first step as step 0
-    stepsBiasInput = int(self.stepsBiasInput.text()) + 1
+    stepsBiasInput = int(self.stepsBias()) + 1
     # Set start point
-    biasStart = int(self.fromBiasInput.text())
+    biasStart = int(self.minBias())
     # Create an array
     yPointsArray = []
     # Append the previously made array with a for loop
@@ -63,9 +63,9 @@ def getYPoints(self):
 
 def convertToVolts(self, startI, endI):
     # Multiply the start point by the resistance
-    startV = startI * int(self.rFluxInput.text())
+    startV = startI * int(self.rFlux())
     # Multiply the end point by the resistance
-    endV = endI * int(self.rFluxInput.text())
+    endV = endI * int(self.rFlux())
     return startV, endV
 
 # Somewhere in here I think is where my toggle checks need to happen
@@ -100,10 +100,10 @@ def createKalamariFile(self):
     # Call the function to get the date so we can title the file
     getDate()
     # Get the file path as either the placeholder text or the user input
-    filePath = self.pathInput.text() or self.pathInput.placeholderText()
+    filePath = self.path() or self.pathInput.placeholderText()
     # This variable should remain the same even when brought to the mac
-    fileName = str("Kalamari Data " + str(self.waferInput.text()) +
-                   " " + str(self.dieInput.text()) + " " + getDate.dt_string)
+    fileName = str("Kalamari Data " + str(self.wafer()) +
+                   " " + str(self.die()) + " " + getDate.dt_string)
     # Joining both the path and the fileName
     fullPath = os.path.join(filePath, fileName+".txt")
     # For now I have my path directory written so that
@@ -120,27 +120,27 @@ def createKalamariFile(self):
     k = open(fullPath, 'a')
     # Write the second line
     k.write("Date: " + getDate.dt_string + " Wafer-Die: " +
-            self.waferInput.text() + self.dieInput.text() + " Initials: " +
-            self.initialsInput.text() + " Book/Page: " + self.bookInput.text()
-            + "/" + self.pageInput.text() + "\n")
+            self.wafer() + self.die() + " Initials: " +
+            self.initials() + " Book/Page: " + self.book()
+            + "/" + self.page() + "\n")
     # Third line is just the one string
     k.write("Paramters: \n")
     # Fourth line is everything pertaining to flux
-    k.write("Flux From: " + self.fromFluxInput.text() + " Flux To: " +
-            self.toFluxInput.text() + " Flux Steps: " +
-            self.stepsFluxInput.text() + " Flux Resistance(RFlux): " +
-            self.rFluxInput.text() + "\n")
+    k.write("Flux From: " + self.minFlux() + " Flux To: " +
+            self.maxFlux() + " Flux Steps: " +
+            self.stepsFlux() + " Flux Resistance(RFlux): " +
+            self.rFlux() + "\n")
     # Fifth line is everything pertaining to bias
-    k.write("Bias From: " + self.fromBiasInput.text() + " Bias To: " +
-            self.toBiasInput.text() + " Bias Steps: " +
-            self.stepsBiasInput.text() + " Bias Resistance(RBias): " +
-            self.rBiasInput.text() + "\n")
+    k.write("Bias From: " + self.minBias() + " Bias To: " +
+            self.maxBias() + " Bias Steps: " +
+            self.stepsBias() + " Bias Resistance(RBias): " +
+            self.rBias() + "\n")
     # Sixth line is everything pertaining to multimeter settings.
     # THE CODE IS ANGRY RIGHT NOW BECAUSE THE VARIABLE DITHERVALUE IS STILL
     # COMMENTED OUT FROM ABOVE
-    # k.write("Tsettle: " + self.tSettleInput.text() + " Gain: " +
-    # self.gainInput.text() + " NPLC: " + self.NPLCInput.text() + " Range: " +
-    # self.rangeInput.text() + " Dither: " + ditherValue + "\n")
+    # k.write("Tsettle: " + self.tSettle() + " Gain: " +
+    # self.gain() + " NPLC: " + self.NPLC() + " Range: " +
+    # self.range() + " Dither: " + ditherValue + "\n")
     # Seventh line defines what type of graph it is
     # I STILL HAVE NOT WRITTEN THE CODE FOR THE VPHI IV TOGGLE
     k.write("Curve Type: \n")
@@ -155,8 +155,7 @@ def startStopButton_clicked(self):
     # Call the function to change the text
     startStopButtonTextChange(self)
     createKalamariFile(self)
-
     # Call the function and pass the arguments of the fromFlux and toFlux Input
-    startV, endV = convertToVolts(self, int(self.fromFluxInput.text()), int(self.toFluxInput.text()))
+    startV, endV = convertToVolts(self, int(self.minFlux()), int(self.maxFlux()))
 
-    #daq.ConvertRangeDAC(startV, endV, int(self.stepsFluxInput.text()))
+    #daq.ConvertRangeDAC(startV, endV, int(self.stepsFlux()))

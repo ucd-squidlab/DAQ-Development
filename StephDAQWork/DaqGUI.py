@@ -687,133 +687,130 @@ class Ui_MainWindow(object):
         self.menuMain.setTitle(_translate("MainWindow", "Main"))
     
     def wafer(self):
-        return self.waferLabel.text()
+        return self.waferInput.text()
 
     def die(self):
-        return self.dieLabel.text()
+        return self.dieInput.text()
 
     def initials(self):
-        return self.initialsLabel.text()
+        return self.initialsInput.text()
 
     def book(self):
-        return self.bookLabel.text()
+        return self.bookInput.text()
 
     def page(self):
-        return self.pageLabel.text()
+        return self.pageInput.text()
 
     def path(self):
-        return self.pathLabel.text()
+        return self.pathInput.text()
 
-    def fromFlux(self):
-        return self.fromFluxLabel.text()
+    def minFlux(self):
+        return self.fromFluxInput.text()
 
-    def toFlux(self):
-        return self.toFluxLabel.text()
+    def maxFlux(self):
+        return self.toFluxInput.text()
 
     def stepsFlux(self):
-        return self.stepsFluxLabel.text()
+        return self.stepsFluxInput.text()
 
     def tSettle(self):
-        return self.tSettleLabel.text()
+        return self.tSettleInput.text()
 
     def NPLC(self):
-        return self.NPLCLabel.text()
+        return self.NPLCInput.text()
 
     def range(self):
-        return self.rangeLabel.text()
+        return self.rangeInput.text()
 
-    def fromBias(self):
-        return self.fromBiasLabel.text()
+    def minBias(self):
+        return self.fromBiasInput.text()
 
-    def toBias(self):
-        return self.toBiasLabel.text()
+    def maxBias(self):
+        return self.toBiasInput.text()
 
     def stepsBias(self):
-        return self.stepsBiasLabel.text()
+        return self.stepsBiasInput.text()
 
     def flux(self):
-        return self.fluxLabel.text()
+        return self.fluxInput.text()
 
     def bias(self):
-        return self.biasLabel.text()
+        return self.biasInput.text()
 
     def multimeter(self):
-        return self.multimeterLabel.text()
+        return self.multimeterInput.text()
 
     def VPhi(self):
-        return self.VPhiLabel.text()
+        return self.VPhiInput.text()
 
     def IV(self):
-        return self.IVLabel.text()
+        return self.IVInput.text()
 
     def noise(self):
-        return self.noiseLabel.text()
+        return self.noiseInput.text()
 
     def noNoise(self):
-        return self.noNoiseLabel.text()
+        return self.noNoiseInput.text()
 
     def withDerivative(self):
-        return self.withDerivativeLabel.text()
+        return self.withDerivativeInput.text()
 
     def withoutDerivative(self):
-        return self.withoutDerivativeLabel.text()
+        return self.withoutDerivativeInput.text()
 
     def slope(self):
-        return self.slopeLabel.text()
+        return self.slopeInput.text()
 
     def rFlux(self):
-        return self.rFluxLabel.text()
+        return self.rFluxInput.text()
 
     def rBias(self):
-        return self.rBiasLabel.text()
+        return self.rBiasInput.text()
 
     def gain(self):
-        return self.gainLabel.text()
+        return self.gainInput.text()
 
     def dither(self):
-        return self.ditherLabel.text()
+        return self.ditherInput.text()
 
     def rFluxDefault(self):
-        return self.rFluxDefaultLabel.text()
+        return self.rFluxDefaultInput.text()
 
     def rBiasDefault(self):
-        return self.rBiasDefaultLabel.text()
+        return self.rBiasDefaultInput.text()
 
     def gainDefault(self):
-        return self.gainDefaultLabel.text()
+        return self.gainDefaultInput.text()
 
     def ditherOne(self):
-        return self.ditherOneLabel.text()
+        return self.ditherOneInput.text()
 
     def ditherTwo(self):
-        return self.ditherTwoLabel.text()
+        return self.ditherTwoInput.text()
 
     def startStopB(self):
         return self.startStopButton.text()
 
     def errorIn(self):
-        return self.errorInLabel.text()
+        return self.errorInInput.text()
 
     def errorOut(self):
-        return self.errorOutLabel.text()
+        return self.errorOutInput.text()
 
     def errorInStatus(self):
-        return self.errorInStatusLabel.text()
+        return self.errorInStatusInput.text()
 
     def errorInCode(self):
-        return self.errorInCodeLabel.text()
+        return self.errorInCodeInput.text()
 
     def errorInSource(self):
-        return self.errorInSourceLabel.text()
+        return self.errorInSourceInput.text()
 
     def errorOutStatus(self):
-        return self.errorOutStatusLabel.text()
+        return self.errorOutStatusInput.text()
 
     def errorOutCode(self):
-        return self.errorOutCodeLabel.text()
+        return self.errorOutCodeInput.text()
 
     def errorOutSource(self):
-        return self.errorOutSourceLabel.text((self))
-
-    def
-        return self.men.text()uMainself.menuMain
+        return self.errorOutSourceInput.text(())
