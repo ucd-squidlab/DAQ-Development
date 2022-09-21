@@ -130,6 +130,8 @@ def createKalamariFile(self):
     # Close the file once you are done appending
     k.close()
 
+    return fullPath
+
 
 def startStopButton_clicked(self):
     # Call the function to change the text
@@ -139,7 +141,7 @@ def startStopButton_clicked(self):
 
 def kalamariMain(self):
     #Make the data file
-    createKalamariFile(self)
+    filename = createKalamariFile(self)
 
     #Convert flux/bias inputs to their voltages (V = IR)
     minFluxV = self.minFlux() * self.rFlux() / 1000000
@@ -148,16 +150,20 @@ def kalamariMain(self):
     maxBiasV = self.maxBias() * self.rBias() / 1000000
 
     #Get the array of points to use. May as well have numpy do it.
-    fluxPoints = np.linspace(minFluxV,maxFluxV,num = self.fluxSteps())
-    biasPoints = np.linspace(minBiasV,maxBiasV,num = self.biasSteps())
+    fluxPointsV = np.linspace(minFluxV,maxFluxV,num = self.fluxSteps())
+    biasPointsV = np.linspace(minBiasV,maxBiasV,num = self.biasSteps())
+
+    #Keep the array of bias points on hand for appending to the data docs
+    fluxPoints = np.linspace(self.minFlux(),self.maxFlux(),num = self.fluxSteps())
+    biasPoints = np.linspace(self.minBias(),self.maxBias(),num = self.biasSteps())
 
     #Set up inner/outer loop based on curve type
     if self.IV: #looking at this and considering it: i'm not sure I know how kalamari gets one of these.
-        innerPoints = fluxPoints
-        outerPoints = biasPoints
+        innerPoints = fluxPointsV
+        outerPoints = biasPointsV
     else:
-        innerPoints = biasPoints
-        outerPoints = fluxPoints
+        innerPoints = biasPointsV
+        outerPoints = fluxPointsV
 
     if self.noise():
         #Establish connection with the spectrum analyzer
@@ -165,16 +171,40 @@ def kalamariMain(self):
         #Make sure the connection was successful
         instr.ask("*IDN?")
         #We don't care what it says; if the connection fails it'll throw an error.
+        #you WILL still get a response, though, so print it to console if that's something you want to do.
+
+        #set a low timeout to reduce the amount of waiting you have to do.
+        instr.timeout = 1
+
+        filedir = str(self.wafer()) + " " + str(self.die())
+        command = ":Instrument:MakeDir \"{}\"".format(filedir) #insert variable into string
+        try:
+            instr.ask(command)
+        except Exception:
+            pass
+
 
     
     #Setup is done; just run the loops
-    for x1 in outerPoints:
+    #Running by index makes data logging simpler; x1 and x2 are effectively tied to the index
+    for i in range(0,len(outerPoints)):
+        x1 = outerPoints[i]
         SetDACVoltage(0,x1)
-        for x2 in innerPoints:
+        for j in range(0,len(innerPoints)):
+            x2 = innerPoints[j]
             SetDACVoltage(1,x2)
+
+            #Put the data in the file as you gather it
+            k = open(filename, 'a')
 
             #Get the data
             voltage = ReadADC(0)
+
+            if self.noise():
+                try:
+                    instr.ask(":Displays:Graph(1):SaveTrace 101,\"testgraph.txt\",0")
+                except Exception:
+                    pass
 
             if self.dither() != 0:
                 #dither up x1
@@ -196,11 +226,13 @@ def kalamariMain(self):
                 SetDACVoltage(1,x2)
 
                 #Do some data processing to get the metrics that are actually needed
+            
 
-            if self.noise():
-                #Ugh. whatever makes this section work i guess.
 
-            #Write the data to a file
+            
+
+
+
 
             
 
