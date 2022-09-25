@@ -142,6 +142,7 @@ def startStopButton_clicked(self):
 def kalamariMain(self):
     #Make the data file
     filename = createKalamariFile(self)
+    kalamariData = []
 
     #Convert flux/bias inputs to their voltages (V = IR)
     minFluxV = self.minFlux() * self.rFlux() / 1000000
@@ -150,12 +151,12 @@ def kalamariMain(self):
     maxBiasV = self.maxBias() * self.rBias() / 1000000
 
     #Get the array of points to use. May as well have numpy do it.
-    fluxPointsV = np.linspace(minFluxV,maxFluxV,num = self.fluxSteps())
-    biasPointsV = np.linspace(minBiasV,maxBiasV,num = self.biasSteps())
+    fluxPointsV = np.linspace(minFluxV,maxFluxV,num = self.fluxSteps()+1)
+    biasPointsV = np.linspace(minBiasV,maxBiasV,num = self.biasSteps()+1)
 
     #Keep the array of bias points on hand for appending to the data docs
-    fluxPoints = np.linspace(self.minFlux(),self.maxFlux(),num = self.fluxSteps())
-    biasPoints = np.linspace(self.minBias(),self.maxBias(),num = self.biasSteps())
+    fluxPoints = np.linspace(self.minFlux(),self.maxFlux(),num = self.fluxSteps()+1)
+    biasPoints = np.linspace(self.minBias(),self.maxBias(),num = self.biasSteps()+1)
 
     #Set up inner/outer loop based on curve type
     if self.IV: #looking at this and considering it: i'm not sure I know how kalamari gets one of these.
@@ -187,6 +188,7 @@ def kalamariMain(self):
     
     #Setup is done; just run the loops
     #Running by index makes data logging simpler; x1 and x2 are effectively tied to the index
+    #Assuming use of DACs A and B
     for i in range(0,len(outerPoints)):
         x1 = outerPoints[i]
         SetDACVoltage(0,x1)
@@ -201,10 +203,16 @@ def kalamariMain(self):
             voltage = ReadADC(0)
 
             if self.noise():
+                noiseFileName = filedir + "\\Noise trace {}, {}".format(i,j)
                 try:
-                    instr.ask(":Displays:Graph(1):SaveTrace 101,\"testgraph.txt\",0")
+                    instr.ask(":Displays:Graph(1):SaveTrace 101,\"{}.txt\",0".format(noiseFileName))
                 except Exception:
                     pass
+                #Now we WANT the output.
+                output = instr.ask(":Instrument:TransferFile: \"{}.txt\",0".format(noiseFileName))
+                #take the output and the 10kHz point and save it
+                sV = output[10]
+
 
             if self.dither() != 0:
                 #dither up x1
@@ -215,6 +223,7 @@ def kalamariMain(self):
                 ditherLeft = ReadADC(0)
                 #reset x1
                 SetDACVoltage(0,x1)
+                x1Slope = (ditherLeft-ditherRight)/(DACLSB*self.dither()*2)
 
                 #dither up x2
                 SetDACVoltage(1,x2 + DACLSB*self.dither())
@@ -224,8 +233,7 @@ def kalamariMain(self):
                 ditherDown = ReadADC(0)
                 #reset x2
                 SetDACVoltage(1,x2)
-
-                #Do some data processing to get the metrics that are actually needed
+                x2Slope = (ditherUp-ditherDown)/(DACLSB*self.dither()*2)
             
 
 
