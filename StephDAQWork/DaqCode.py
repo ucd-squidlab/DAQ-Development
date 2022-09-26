@@ -123,10 +123,10 @@ def createKalamariFile(self):
             self.stepsBias() + " Bias Resistance(RBias): " +
             self.rBias() + "\n")
     # Sixth line mentions dither settings and the curve type
-    curveName = ("IV" if self.IV else "V\u03C6")
+    curveName = ("IV" if self.IV else "V\u03C6") #Unicode for phi!
     k.write("Dither: " + self.dither() + "\tCurve Type: " + curveName + "\n")
     # Formatting the next line
-    k.write("I_Flux\tI_Bias\tVoltage\tdV/dI F(\u03A9)\tRd(\u03A9)\tSv\tSi")
+    k.write("I_Flux (\u03BCA)\tI_Bias (\u03BCA)\tVoltage (mV)\tdV/dI F(\u03A9)\tRd(\u03A9)\tSv (nV/rtHz)\tSiSv (pA/rtHz)")
     # Close the file once you are done appending
     k.close()
 
@@ -173,9 +173,18 @@ def kalamariMain(self):
         instr.ask("*IDN?")
         #We don't care what it says; if the connection fails it'll throw an error.
         #you WILL still get a response, though, so print it to console if that's something you want to do.
+        #Most of the SR1 settings should be loaded with the default startup config.
 
         #set a low timeout to reduce the amount of waiting you have to do.
-        instr.timeout = 1
+        instr.timeout = 0.25
+
+        #On the list of stupid things I have to do: 
+        #You have to reinitialize the default directory each time you turn on the device.
+        try:
+            instr.ask(":Scripting:Load \"defaultdir.vbs\"")
+        except Exception:
+            pass
+        instr.ask(":Scripting:Run 5")
 
         filedir = str(self.wafer()) + " " + str(self.die())
         command = ":Instrument:MakeDir \"{}\"".format(filedir) #insert variable into string
@@ -184,8 +193,6 @@ def kalamariMain(self):
         except Exception:
             pass
 
-
-    
     #Setup is done; just run the loops
     #Running by index makes data logging simpler; x1 and x2 are effectively tied to the index
     #Assuming use of DACs A and B
@@ -200,18 +207,20 @@ def kalamariMain(self):
             k = open(filename, 'a')
 
             #Get the data
-            voltage = ReadADC(0)
+            voltage = ReadADC(0) / self.gain()
 
             if self.noise():
                 noiseFileName = filedir + "\\Noise trace {}, {}".format(i,j)
                 try:
-                    instr.ask(":Displays:Graph(1):SaveTrace 101,\"{}.txt\",0".format(noiseFileName))
+                    instr.ask(":Displays:Graph(0):SaveTrace 101,\"{}.txt\",0".format(noiseFileName))
                 except Exception:
                     pass
-                #Now we WANT the output.
-                output = instr.ask(":Instrument:TransferFile: \"{}.txt\",0".format(noiseFileName))
-                #take the output and the 10kHz point and save it
-                sV = output[10]
+                #We just want 10kHz. The first cursor should be over it.
+                output = instr.ask(":Displays:Graph(0):Cursor:y1Rdg?")
+                #Output includes units; just remove them
+                output = float(output.strip().strip('V/RTHZ'))
+                #Convert units to nV/rtHz and move on
+                sV = output / self.gain() * 10**6
 
 
             if self.dither() != 0:
@@ -223,7 +232,7 @@ def kalamariMain(self):
                 ditherLeft = ReadADC(0)
                 #reset x1
                 SetDACVoltage(0,x1)
-                x1Slope = (ditherLeft-ditherRight)/(DACLSB*self.dither()*2)
+                x1Slope = (ditherLeft-ditherRight)/(DACLSB*self.dither()*2) / self.gain()
 
                 #dither up x2
                 SetDACVoltage(1,x2 + DACLSB*self.dither())
@@ -233,15 +242,35 @@ def kalamariMain(self):
                 ditherDown = ReadADC(0)
                 #reset x2
                 SetDACVoltage(1,x2)
-                x2Slope = (ditherUp-ditherDown)/(DACLSB*self.dither()*2)
+                x2Slope = (ditherUp-ditherDown)/(DACLSB*self.dither()*2) / self.gain()
+
+            #Process the data and save it.
             
+            #Using the original values saves a conversion step
+            if self.IV:
+                k.write("{},\t".format(round(fluxPoints[i],3)))
+                k.write("{},\t".format(round(biasPoints[j],3)))
+                thisData = np.array([fluxPoints[i],biasPoints[j],voltage])
+            else:
+                k.write("{},\t".format(round(biasPoints[i],3)))
+                k.write("{},\t".format(round(fluxPoints[j],3)))
+                thisData = np.array([biasPoints[i],fluxPoints[j],voltage])
 
+            k.write("{},\t".format(round(voltage*1000,3))) #Convert to mV
 
+            if self.dither() != 0:
+                k.write(round(x1Slope,3),"\t")
+                k.write(round(x2Slope,3),"\t")
+                thisData = np.append(thisData,[x1Slope,x2Slope])
             
+            if self.noise():
+                sI = sV/x1Slope*1000 if self.dither() != 0 else 0 #Convert to pA
+                k.write(round(sV,3),"\t")
+                k.write(round(sI,3),"\t")
+                thisData = np.append(thisData,[sV,sI])
 
-
-
-
-            
-
-
+            #Round of data aquisition complete; close the file, append the raw data
+            kalamariData.append(thisData)
+            k.close()
+    
+    #Take the raw data and generate some graphs.
