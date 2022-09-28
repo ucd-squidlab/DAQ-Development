@@ -75,7 +75,7 @@ functionCodes = {
 # Mac: port = "/dev/tty.usbmodemfd141"
 # Windows: port = "COM7"
 # Returns -1 if there is an error.
-def setup(port="COM7", baudrate=115200, timeout=1):
+def setup(port="/dev/tty.usbmodem109118801", baudrate=115200, timeout=1):
     global ser
     # setup and open serial port
     ser.baudrate = baudrate
@@ -88,7 +88,7 @@ def setup(port="COM7", baudrate=115200, timeout=1):
     ser.flushInput()
     ser.flushOutput()
     return 0
-
+setup()
 # Close the serial port
 def close():
     global ser

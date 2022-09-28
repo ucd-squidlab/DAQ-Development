@@ -12,7 +12,6 @@ import numpy as np
 import os
 from datetime import datetime
 from PyQt5 import QtCore, QtGui, QtWidgets
-import daq
 
 
 class Ui_MainWindow(object):
@@ -38,27 +37,27 @@ class Ui_MainWindow(object):
         self.waferInputLayout.setObjectName("waferInputLayout")
 
         # Define waferInput
-        self.waferInput = QtWidgets.QLineEdit(self.horizontalLayoutWidget)
+        self.waferInput = QtWidgets.QLineEdit(self.horizontalLayoutWidget, placeholderText="MEH01")
         self.waferInput.setObjectName("waferInput")
         self.waferInputLayout.addWidget(self.waferInput)
 
         # Define dieInput
-        self.dieInput = QtWidgets.QLineEdit(self.horizontalLayoutWidget)
+        self.dieInput = QtWidgets.QLineEdit(self.horizontalLayoutWidget, placeholderText="R0C0")
         self.dieInput.setObjectName("dieInput")
         self.waferInputLayout.addWidget(self.dieInput)
 
         # Define initialsInput
-        self.initialsInput = QtWidgets.QLineEdit(self.horizontalLayoutWidget)
+        self.initialsInput = QtWidgets.QLineEdit(self.horizontalLayoutWidget, placeholderText="CR")
         self.initialsInput.setObjectName("initialsInput")
         self.waferInputLayout.addWidget(self.initialsInput)
 
         # Define bookInput
-        self.bookInput = QtWidgets.QLineEdit(self.horizontalLayoutWidget)
+        self.bookInput = QtWidgets.QLineEdit(self.horizontalLayoutWidget, placeholderText="0")
         self.bookInput.setObjectName("bookInput")
         self.waferInputLayout.addWidget(self.bookInput)
 
         # Define pageInput
-        self.pageInput = QtWidgets.QLineEdit(self.horizontalLayoutWidget)
+        self.pageInput = QtWidgets.QLineEdit(self.horizontalLayoutWidget, placeholderText="0")
         self.pageInput.setObjectName("pageInput")
         self.waferInputLayout.addWidget(self.pageInput)
 
@@ -209,17 +208,17 @@ class Ui_MainWindow(object):
         self.fluxInputLayout.setObjectName("fluxInputLayout")
 
         # Define fromFluxInput
-        self.fromFluxInput = QtWidgets.QLineEdit(self.verticalLayoutWidget_4)
+        self.fromFluxInput = QtWidgets.QLineEdit(self.verticalLayoutWidget_4, placeholderText="-12")
         self.fromFluxInput.setObjectName("fromFluxInput")
         self.fluxInputLayout.addWidget(self.fromFluxInput)
 
         # Define toFluxInput
-        self.toFluxInput = QtWidgets.QLineEdit(self.verticalLayoutWidget_4)
+        self.toFluxInput = QtWidgets.QLineEdit(self.verticalLayoutWidget_4, placeholderText="12")
         self.toFluxInput.setObjectName("toFluxInput")
         self.fluxInputLayout.addWidget(self.toFluxInput)
 
         # Define stepsFluxInput
-        self.stepsFluxInput = QtWidgets.QLineEdit(self.verticalLayoutWidget_4)
+        self.stepsFluxInput = QtWidgets.QLineEdit(self.verticalLayoutWidget_4, placeholderText="60")
         self.stepsFluxInput.setObjectName("stepsFluxInput")
         self.fluxInputLayout.addWidget(self.stepsFluxInput)
 
@@ -234,17 +233,17 @@ class Ui_MainWindow(object):
         self.biasInputLayout.setObjectName("biasInputLayout")
 
         # Define fromBiasInput
-        self.fromBiasInput = QtWidgets.QLineEdit(self.verticalLayoutWidget_6)
+        self.fromBiasInput = QtWidgets.QLineEdit(self.verticalLayoutWidget_6, placeholderText="25")
         self.fromBiasInput.setObjectName("fromBiasInput")
         self.biasInputLayout.addWidget(self.fromBiasInput)
 
         # Define toBiasInput
-        self.toBiasInput = QtWidgets.QLineEdit(self.verticalLayoutWidget_6)
+        self.toBiasInput = QtWidgets.QLineEdit(self.verticalLayoutWidget_6, placeholderText="50")
         self.toBiasInput.setObjectName("toBiasInput")
         self.biasInputLayout.addWidget(self.toBiasInput)
 
         # Define stepsBiasInput
-        self.stepsBiasInput = QtWidgets.QLineEdit(self.verticalLayoutWidget_6)
+        self.stepsBiasInput = QtWidgets.QLineEdit(self.verticalLayoutWidget_6, placeholderText="4")
         self.stepsBiasInput.setObjectName("stepsBiasInput")
         self.biasInputLayout.addWidget(self.stepsBiasInput)
 
@@ -434,17 +433,17 @@ class Ui_MainWindow(object):
         self.rFluxInputLayout.setObjectName("rFluxInputLayout")
 
         # Define rFluxInput
-        self.rFluxInput = QtWidgets.QLineEdit(self.verticalLayoutWidget_12)
+        self.rFluxInput = QtWidgets.QLineEdit(self.verticalLayoutWidget_12, placeholderText="21333")
         self.rFluxInput.setObjectName("rFluxInput")
         self.rFluxInputLayout.addWidget(self.rFluxInput)
 
         # Defien rBiasInput
-        self.rBiasInput = QtWidgets.QLineEdit(self.verticalLayoutWidget_12)
+        self.rBiasInput = QtWidgets.QLineEdit(self.verticalLayoutWidget_12, placeholderText="10073")
         self.rBiasInput.setObjectName("rBiasInput")
         self.rFluxInputLayout.addWidget(self.rBiasInput)
 
         # Define gainInput
-        self.gainInput = QtWidgets.QLineEdit(self.verticalLayoutWidget_12)
+        self.gainInput = QtWidgets.QLineEdit(self.verticalLayoutWidget_12, placeholderText="98")
         self.gainInput.setObjectName("gainInput")
         self.rFluxInputLayout.addWidget(self.gainInput)
 
@@ -706,22 +705,22 @@ class Ui_MainWindow(object):
         return self.pathInput.text()
 
     def minFlux(self):
-        return self.fromFluxInput.text()
+        return int(self.fromFluxInput.text())
 
     def maxFlux(self):
-        return self.toFluxInput.text()
+        return int(self.toFluxInput.text())
 
     def fluxSteps(self):
-        return self.stepsFluxInput.text()
+        return int(self.stepsFluxInput.text())
 
     def minBias(self):
-        return self.fromBiasInput.text()
+        return int(self.fromBiasInput.text())
 
     def maxBias(self):
-        return self.toBiasInput.text()
+        return int(self.toBiasInput.text())
 
     def biasSteps(self):
-        return self.stepsBiasInput.text()
+        return int(self.stepsBiasInput.text())
 
     def VPhi(self):
         return self.VPhiIVSlider.value() == 1
@@ -739,13 +738,13 @@ class Ui_MainWindow(object):
         return self.slopeSlider.value() == 1
 
     def rFlux(self):
-        return self.rFluxInput.text()
+        return int(self.rFluxInput.text())
 
     def rBias(self):
-        return self.rBiasInput.text()
+        return int(self.rBiasInput.text())
 
     def gain(self):
-        return self.gainInput.text()
+        return int(self.gainInput.text())
 
     def dither(self):
         return self.ditherSlider.value() if self.slope() else 0
