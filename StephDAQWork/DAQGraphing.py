@@ -4,7 +4,6 @@ Created on Wed Oct 19 12:02:56 2022
 
 @author: Steph
 """
-# peepee poopoo
 
 # Import the matplotlib library as plt
 # This will be our sole graphing library for all intents and purposes
