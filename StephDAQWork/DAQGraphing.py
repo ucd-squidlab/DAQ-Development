@@ -4,7 +4,6 @@ Created on Wed Oct 19 12:02:56 2022
 
 @author: Steph
 """
-# peepee poopoo
 
 # Import the matplotlib library as plt
 # This will be our sole graphing library for all intents and purposes
@@ -96,25 +95,14 @@ plt.figlegend(handles=[voltagePatch, noisePatch], loc='lower center')
 
 
 '''
-Create the data
+Extract the data
 '''
 
 
-# Create a function that can be called into the DaqCode.py file 
+# Create a while loop to graph the data
+# Create a if check statement that checks the bias value and deteremines
+# Whether or not to increment the graph
 
-# Begin on graph 1
-# Take flux values and graph voltage values
-# Increment graphs as bias increases
-# Some sort of while statement that plots the data for a specific bias value
-# Read data from Kalamari Code for the specific bias value
-# Increment the axs[] as the bias increases
-
-# Create 4 graphs
-# Constrained layout
-# Automatically adjusts things so they cleanly fit in the figure window
-# Needs to be activated before any axes are added
-# It looks like you actually plot the graph using a for loop and increment
-# through axs[i] after you format according to the constrained layout
 
 # Superimpose all the graphs on each other
 
