@@ -217,11 +217,16 @@ def kalamariMain(self):
             voltage = daq.ReadADC(0) / self.gain()
 
             if self.noise():
-                noiseFileName = filedir + "\\Noise trace {}, {}".format(i,j)
+                noiseFileName = filedir + "\\Noise trace {}, {}.txt".format(i,j)
                 try:
-                    instr.ask(":Displays:Graph(0):SaveTrace 101,\"{}.txt\",0".format(noiseFileName))
+                    instr.ask(":Displays:Graph(0):SaveTrace 101,\"{}\",0".format(noiseFileName))
                 except Exception:
                     pass
+                #transfer the file and save it locally because martin said so
+                tracefile = instr.ask(":Instrument:TransferFile? \"{}\"".format(noiseFileName))
+                k = open(noiseFileName, 'w')
+                k.write(tracefile)
+                k.close
                 #We just want 10kHz. The first cursor should be over it.
                 output = instr.ask(":Displays:Graph(0):Cursor:y1Rdg?")
                 #Output includes units; just remove them
