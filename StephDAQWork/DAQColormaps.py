@@ -20,10 +20,20 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
-""" I'm not sure yet as to why these were imported """
-
 
 # We will have 3 (sub)plots
+
+fig, axs = plt.subplots(1, 3)
+
+# Name the figure
+
+''' "CHIP" is a placeholder variable. Some value will probably be passed from
+DaqCode'''
+chipName = "CHIP"
+fig.suptitle(chipName)
+
+
+
 # Each plot will have the same x and y axis
 # The color will be the depedent variable
 
@@ -50,7 +60,7 @@ y = np.random.random(200)
 # associate it with python class(es)
 # I'm not sure what randint means
 
-classes = np.random.randint(0, 100, 200)
+classes = np.random.randint(0, 7, 200)
 
 # Create a custom color map for all intents and purposes
 # LinearSegmentedColormap will give us a spectrum of colors
@@ -62,7 +72,12 @@ classes = np.random.randint(0, 100, 200)
 custom_cmap = matplotlib.colors.LinearSegmentedColormap.from_list(
     "custom", ["#00008B", "blue", "cyan", "green", "yellow", "orange", "red", "#8B0000"])
 
-# When plotting
+# Plot commands
+
+# Creates a scatter plot, plotting x and y
+# c is the list of colors
 plt.scatter(x, y, c=classes, cmap=custom_cmap)
+
+# This shows the color bar
 plt.colorbar()
 plt.show()
