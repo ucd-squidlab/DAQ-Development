@@ -22,7 +22,7 @@ import numpy as np
 
 
 # We will have 3 (sub)plots
-
+# The 1 parameter creates 1 row, the 3 parameter creates 3 columns
 fig, axs = plt.subplots(1, 3)
 
 # Name the figure
@@ -33,13 +33,16 @@ chipName = "CHIP"
 fig.suptitle(chipName)
 
 
-
 # Each plot will have the same x and y axis
 # The color will be the depedent variable
 
 # For plot 1, our depdent variable will be Isot
 # For plot 2, our depdent variable will be dIsot/dphi
 # For plot 3, our depdent variable will be noise
+axs[0].title.set_text('Isot')
+axs[1].title.set_text('dIsot/dt')
+axs[2].title.set_text('Noise')
+
 
 # The last key part of this code is that it needs to incorporate some sort of
 # crosshair or dial that can scan along the x and y axes of each plot
@@ -68,7 +71,6 @@ classes = np.random.randint(0, 7, 200)
 # Some colors are listed by names others are listed by hex code because they
 # do not have a name recognized by matplotlib
 # This spectrum should mimic the colorbars in the other SOT journals
-
 custom_cmap = matplotlib.colors.LinearSegmentedColormap.from_list(
     "custom", ["#00008B", "blue", "cyan", "green", "yellow", "orange", "red", "#8B0000"])
 
@@ -76,8 +78,8 @@ custom_cmap = matplotlib.colors.LinearSegmentedColormap.from_list(
 
 # Creates a scatter plot, plotting x and y
 # c is the list of colors
-plt.scatter(x, y, c=classes, cmap=custom_cmap)
+axs[0].scatter(x, y, c=classes, cmap=custom_cmap)
 
 # This shows the color bar
-plt.colorbar()
+axs[0].colorbar()
 plt.show()
