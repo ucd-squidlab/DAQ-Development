@@ -26,7 +26,6 @@ import numpy as np
 fig, axs = plt.subplots(1, 3)
 
 # Name the figure
-
 ''' "CHIP" is a placeholder variable. Some value will probably be passed from
 DaqCode'''
 chipName = "CHIP"
@@ -78,8 +77,11 @@ custom_cmap = matplotlib.colors.LinearSegmentedColormap.from_list(
 
 # Creates a scatter plot, plotting x and y
 # c is the list of colors
-axs[0].scatter(x, y, c=classes, cmap=custom_cmap)
 
 # This shows the color bar
-axs[0].colorbar()
+for col in range(3):
+    ax = axs[col]
+    pcm = ax.pcolormesh(np.random.random((20, 20)) *
+                        (col + 1), cmap=custom_cmap)
+    fig.colorbar(pcm, ax=ax)
 plt.show()
