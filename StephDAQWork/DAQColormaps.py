@@ -19,11 +19,12 @@ from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 # We will have 3 (sub)plots
 # The 1 parameter creates 1 row, the 3 parameter creates 3 columns
-fig, axs = plt.subplots(1, 3)
+fig, axs = plt.subplots(1, 3, figsize=(15, 15))
 
 # Name the figure
 ''' "CHIP" is a placeholder variable. Some value will probably be passed from
@@ -32,14 +33,14 @@ chipName = "CHIP"
 fig.suptitle(chipName)
 
 
-# Each plot will have the same x and y axis
+# For all intents and purposes, the y axis will be shared
 # The color will be the depedent variable
 
 # For plot 1, our depdent variable will be Isot
 # For plot 2, our depdent variable will be dIsot/dphi
 # For plot 3, our depdent variable will be noise
-axs[0].title.set_text('Isot')
-axs[1].title.set_text('dIsot/dt')
+axs[0].title.set_text('I' + u'\u209B' + u'\u2092' + u'\u209C')
+axs[1].title.set_text('dI' + u'\u209B' + u'\u2092' + u'\u209C' + '/dt')
 axs[2].title.set_text('Noise')
 
 
@@ -60,9 +61,8 @@ y = np.random.random(200)
 # This part was retrieved from a youtube tutorial I had watched
 # I'm not necessarily sure why he calls it 'classes' because that makes me
 # associate it with python class(es)
-# I'm not sure what randint means
 
-classes = np.random.randint(0, 7, 200)
+classes = np.random.randint(0, 30, 200)
 
 # Create a custom color map for all intents and purposes
 # LinearSegmentedColormap will give us a spectrum of colors
@@ -78,10 +78,15 @@ custom_cmap = matplotlib.colors.LinearSegmentedColormap.from_list(
 # Creates a scatter plot, plotting x and y
 # c is the list of colors
 
-# This shows the color bar
-for col in range(3):
-    ax = axs[col]
-    pcm = ax.pcolormesh(np.random.random((20, 20)) *
-                        (col + 1), cmap=custom_cmap)
-    fig.colorbar(pcm, ax=ax)
-plt.show()
+# I think this format of code will work better for our processes
+
+# Now the real question, why is this only plotting on axs[2]
+plot1 = plt.scatter(x, y, c=classes, cmap=custom_cmap)
+plot2 = plt.scatter(x, y, c=classes, cmap=custom_cmap)
+plot3 = plt.scatter(x, y, c=classes, cmap=custom_cmap)
+
+# Do the colorbars
+
+cbar1 = fig.colorbar(plot1, ax=axs[0], orientation='horizontal')
+cbar2 = fig.colorbar(plot2, ax=axs[1], orientation='horizontal')
+cbar3 = fig.colorbar(plot3, ax=axs[2], orientation='horizontal')
