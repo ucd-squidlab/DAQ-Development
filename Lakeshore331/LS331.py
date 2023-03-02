@@ -9,7 +9,8 @@ Author: Autumn Bauman
 """
 
 import pyvisa
-
+from pyvisa.constants import Parity
+import regex as re
 class LS331():
     def __init__(self):
         self.RM = pyvisa.ResourceManager('@py')
@@ -21,7 +22,7 @@ class LS331():
         return self.RM.list_resources()
 
 
-    def connect(self, baudRate:int=None, devicePath:str=None):
+    def connect(self, devicePath:str, baudRate:int=None):
         """
         Connects to device. 
 
@@ -29,16 +30,15 @@ class LS331():
         devicePath:str default "/dev/ttyUSB0
         """
         if baudRate is not None: self.baud_rate = baudRate
-        if devicePath is not None: self.devPath = devicePath
         # This will be the temp controller
-        try:
-            self.controller = self.RM.open_resource(devicePath, baud_rate=self.baud_rate,
-                read_termination="\r\l", write_termination="\r\l")
-        except:
-            raise Exception("Cannot open resouece!")
+        self.controller = self.RM.open_resource(devicePath, baud_rate=9600, read_termination='\n\r', write_termination="\n")
+
+
+        self.controller.parity = Parity.odd
+        self.controller.data_bits = 7
         try:
             self.name = self.controller.query("*IDN?")
-            print(self.name())
+            print(self.name)
         except: 
             raise Exception("Could not communicate with device!")
         self.controller.write("MODE 2")
@@ -46,9 +46,10 @@ class LS331():
     
 
     def queryTemp(self):
-        atmp = self.controller.query("KRDG? A")
-        btmp = self.controller.query("KRDG? B")
+        atmp = re.sub('[^\d.]', "", self.controller.query("KRDG? A"))
+        btmp = re.sub('[^\d.]', "", self.controller.query("KRDG? B"))
         return (atmp, btmp)
 
     def closeConnection(self):
         self.controller.write("MODE 0")
+        self.controller.close()
