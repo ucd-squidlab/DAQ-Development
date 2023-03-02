@@ -46,8 +46,14 @@ class LS331():
     
 
     def queryTemp(self):
-        atmp = re.sub('[^\d.]', "", self.controller.query("KRDG? A"))
-        btmp = re.sub('[^\d.]', "", self.controller.query("KRDG? B"))
+        try:
+            atmp = re.sub('[^\d.]', "", self.controller.query("KRDG? A"))
+        except: 
+            atmp = 'NaN'
+        try: 
+            btmp = re.sub('[^\d.]', "", self.controller.query("KRDG? B"))
+        except: 
+            btmp = 'NaN'
         return (atmp, btmp)
 
     def closeConnection(self):
