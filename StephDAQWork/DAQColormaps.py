@@ -16,7 +16,7 @@ Created on Mon Jan 30 13:59:58 2023
 # pyplot functions as plt
 
 from matplotlib.colors import ListedColormap, LinearSegmentedColormap
-import matplotlib
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -70,7 +70,7 @@ classes = np.random.randint(0, 30, 200)
 # Some colors are listed by names others are listed by hex code because they
 # do not have a name recognized by matplotlib
 # This spectrum should mimic the colorbars in the other SOT journals
-custom_cmap = matplotlib.colors.LinearSegmentedColormap.from_list(
+custom_cmap = mpl.colors.LinearSegmentedColormap.from_list(
     "custom", ["#00008B", "blue", "cyan", "green", "yellow", "orange", "red", "#8B0000"])
 
 # Plot commands
