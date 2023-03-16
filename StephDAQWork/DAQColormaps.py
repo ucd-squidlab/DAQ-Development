@@ -44,13 +44,8 @@ axs[1].title.set_text('dI' + u'\u209B' + u'\u2092' + u'\u209C' + '/dt')
 axs[2].title.set_text('Noise')
 
 
-# The last key part of this code is that it needs to incorporate some sort of
-# crosshair or dial that can scan along the x and y axes of each plot
-# simultaneously and read the 'color value' off each plot
-
-
 """ 
-The following code is 'dummy code' I used to test the custom cmap capabilities 
+The following data is mock data 
 """
 
 # Randomly generate x and y values
@@ -77,16 +72,19 @@ custom_cmap = mpl.colors.LinearSegmentedColormap.from_list(
 
 # Creates a scatter plot, plotting x and y
 # c is the list of colors
-
 # I think this format of code will work better for our processes
 
 # Now the real question, why is this only plotting on axs[2]
-plot1 = plt.scatter(x, y, c=classes, cmap=custom_cmap)
-plot2 = plt.scatter(x, y, c=classes, cmap=custom_cmap)
-plot3 = plt.scatter(x, y, c=classes, cmap=custom_cmap)
+plot1 = axs[0].scatter(x, y, c=classes, cmap=custom_cmap)
+plot2 = axs[1].scatter(x, y, c=classes, cmap=custom_cmap)
+plot3 = axs[2].scatter(x, y, c=classes, cmap=custom_cmap)
 
 # Do the colorbars
 
 cbar1 = fig.colorbar(plot1, ax=axs[0], orientation='horizontal')
 cbar2 = fig.colorbar(plot2, ax=axs[1], orientation='horizontal')
 cbar3 = fig.colorbar(plot3, ax=axs[2], orientation='horizontal')
+
+# The last key part of this code is that it needs to incorporate some sort of
+# crosshair or dial that can scan along the x and y axes of each plot
+# simultaneously and read the 'color value' off each plot
