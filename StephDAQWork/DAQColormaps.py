@@ -53,11 +53,9 @@ The following data is mock data
 x = np.random.random(200)
 y = np.random.random(200)
 
-# This part was retrieved from a youtube tutorial I had watched
-# I'm not necessarily sure why he calls it 'classes' because that makes me
-# associate it with python class(es)
+# This creates data for our color values
 
-classes = np.random.randint(0, 30, 200)
+colors = np.random.randint(0, 30, 200)
 
 # Create a custom color map for all intents and purposes
 # LinearSegmentedColormap will give us a spectrum of colors
@@ -75,9 +73,9 @@ custom_cmap = mpl.colors.LinearSegmentedColormap.from_list(
 # I think this format of code will work better for our processes
 
 # Now the real question, why is this only plotting on axs[2]
-plot1 = axs[0].scatter(x, y, c=classes, cmap=custom_cmap)
-plot2 = axs[1].scatter(x, y, c=classes, cmap=custom_cmap)
-plot3 = axs[2].scatter(x, y, c=classes, cmap=custom_cmap)
+plot1 = axs[0].scatter(x, y, c=colors, cmap=custom_cmap)
+plot2 = axs[1].scatter(x, y, c=colors, cmap=custom_cmap)
+plot3 = axs[2].scatter(x, y, c=colors, cmap=custom_cmap)
 
 # Do the colorbars
 
