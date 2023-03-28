@@ -16,12 +16,11 @@ import DaqCode as dc
 the data file the code saves to '''
 
 # Suppose this script graphs for a SQUID array
-# Given this, we can assign our x and y values
 
-# The variable xPointsArray contains every flux value that will be measured at
-x = dc.xPointsArray
-# The variable yPointsArray contains every bias value that will be measured at
-y = dc.yPointsArray
+# It looks like the array thisData is going to be what I will use
+# How do I interpret the indices?
+# Maybe it is best then to read off the data file
+# However, maybe I could change the data to use pandas
 
 # The x and y values should be the same across all 3 graphs
 # It will be the color values that change across each graph
