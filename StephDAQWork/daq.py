@@ -88,7 +88,9 @@ def setup(port="/dev/tty.usbmodem109118801", baudrate=115200, timeout=1):
     ser.flushInput()
     ser.flushOutput()
     return 0
+
 setup()
+
 # Close the serial port
 def close():
     global ser
