@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Instrument Connection</string>
   </property>
-  <widget class="QDialogButtonBox" name="buttonBox">
+  <widget class="QDialogButtonBox" name="close">
    <property name="geometry">
     <rect>
      <x>50</x>
@@ -26,7 +26,7 @@
     <enum>Qt::Horizontal</enum>
    </property>
    <property name="standardButtons">
-    <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+    <set>QDialogButtonBox::Close</set>
    </property>
   </widget>
   <widget class="QFrame" name="GPIB">
@@ -93,17 +93,17 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>30</y>
+      <y>40</y>
       <width>171</width>
       <height>27</height>
      </rect>
     </property>
    </widget>
-   <widget class="QLabel" name="label_4">
+   <widget class="QLabel" name="DevPath">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>10</y>
+      <y>20</y>
       <width>81</width>
       <height>19</height>
      </rect>
@@ -112,11 +112,11 @@
      <string>Device Path</string>
     </property>
    </widget>
-   <widget class="QLabel" name="label_5">
+   <widget class="QLabel" name="BaudRate">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>60</y>
+      <y>70</y>
       <width>71</width>
       <height>19</height>
      </rect>
@@ -129,7 +129,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>110</y>
+      <y>120</y>
       <width>151</width>
       <height>19</height>
      </rect>
@@ -138,11 +138,11 @@
      <string>Test Command</string>
     </property>
    </widget>
-   <widget class="QLineEdit" name="lineEdit_2">
+   <widget class="QLineEdit" name="BaudRte">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>80</y>
+      <y>90</y>
       <width>113</width>
       <height>27</height>
      </rect>
@@ -151,17 +151,20 @@
      <string>9600</string>
     </property>
    </widget>
-   <widget class="QLineEdit" name="lineEdit_3">
+   <widget class="QLineEdit" name="CommandTest">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>130</y>
+      <y>140</y>
       <width>171</width>
       <height>27</height>
      </rect>
     </property>
+    <property name="text">
+     <string>*IDN?</string>
+    </property>
    </widget>
-   <widget class="QPushButton" name="pushButton">
+   <widget class="QPushButton" name="connectSerial">
     <property name="geometry">
      <rect>
       <x>30</x>
@@ -208,7 +211,7 @@
  <resources/>
  <connections>
   <connection>
-   <sender>buttonBox</sender>
+   <sender>close</sender>
    <signal>accepted()</signal>
    <receiver>Dialog</receiver>
    <slot>accept()</slot>
@@ -224,7 +227,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>buttonBox</sender>
+   <sender>close</sender>
    <signal>rejected()</signal>
    <receiver>Dialog</receiver>
    <slot>reject()</slot>
