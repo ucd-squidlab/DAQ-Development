@@ -85,12 +85,19 @@ class prologixEthernet:
         self.write(f"++auto {int(self._auto)}", escape=False)
 
 
-    def write(self, command, auto:bool=False, escape=True):
+    def write(self, command:str, auto:bool=False, escape=True):
+        """
+        Sends command to instrument and does not read response
 
+        command:str Command to send to instrument
+        auto:bool False If True this will direct instrument to talk after command is written
+        escape:bool True if command contains [+ \\n \\r] characters this escapes them with \\x1B character so they will be passed to instrument and not captured by Prologix
+        """
         # Make it into an ascii string stored as a bytearray
         command = command.encode(encoding='ascii')
         #If it is set to escape special characters then this will do it, used for 
         # + \n and \r and escapes them using the ascii character \x1B. 
+
         #print(command.hex())
         #print(bool(re.search(b"[\x0A\x0D\x2b]", command)))
         #print(re.search(b"[\x0A\x0D\x2b]", command))
@@ -99,8 +106,24 @@ class prologixEthernet:
             command = re.sub(rb"(\x0A)", rb"\x1B\1", command)
             command = re.sub(rb"(\x0D)", rb"\x1B\1", command)
             command = re.sub(rb"(\x2B)", rb"\x1B\1", command)
+
+        # Appends ethernet termination character to command
+        command = command+b"\n"
+
+        if auto:
+            self.plgx.send(b"++auto 1\n")
+        else:
+            self.plgx.send(b"++auto 0\n")
+
         #print(command.hex())
-        self.plgx.send()
+        # Sends command to instrument and stores number of bytes sent 
+        bts = self.plgx.send(command)
+
+        # Returns zero if it transmitted all bites 
+        return bts-len(command)
+
+
+
     def read(self):
         pass
     def ask(self, command):
