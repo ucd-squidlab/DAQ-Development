@@ -42,7 +42,7 @@ class prologixEthernet:
 
         # self.MAC = self.isGpib(ipaddr)
 
-        # Creates the web socket, uses IPV4 
+        # Creates the web socket, uses IPV4 and TCP protocol
         self.plgx = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
         self.plgx.settimeout(timeout)
 
@@ -53,12 +53,13 @@ class prologixEthernet:
 
 
 
-    def isGpib(self, addr:str):
+#    def isGpib(self, addr:str):
         """
-        Test if IP address corresponds to prologix controller 
+#        Oh if only this worked...
+#        Test if IP address corresponds to prologix controller 
 
-        addr:str Address to query
-        """
+#        addr:str Address to query
+        
         try:    # Gets the mac address associated with the IP address
             mac = self.getmac(addr)
         except:  # If it doesn't connect returns error
@@ -72,6 +73,7 @@ class prologixEthernet:
             if not (self.PLGX_MAC - (mac >> 24)): return mac
             else: raise ValueError(f"Device at {addr} not Prologix device!")
     """
+        """
     def getmac(self, IP:str, subnet:bool = False):
         """
     """
@@ -129,8 +131,10 @@ class prologixEthernet:
         self.write(f"++auto {int(self._auto)}", escape=False)
 
 
-    def write(self, command:str, auto:bool=False, escape=True):
-
+    def writeascii(self, command:str, escape=True):
+        """
+        Write command string to Plgx controller. If the command contains character of +, \\n, or ESC (\\)
+        """
         # Make it into an ascii string stored as a bytearray
         command = command.encode(encoding='ascii')
         #If it is set to escape special characters then this will do it, used for 
@@ -147,30 +151,39 @@ class prologixEthernet:
         command = command + b'\x0A'
         self.plgx.send(command)
 
-    def readall(self):
-        return self.plgx.recv(8192).rstrip()
-    
-    def ask(self, command:str, wait:float, Escape:bool=True):
-        self.write(command, escape=Escape)
-        sleep(wait)
-        return self.readall()
+    def readascii(self):
+        """
+        Read all bytes from Prologix buffer. This works with datasets up to 2^13 bytes.
+        This does not work with binairy data transfer
+        """
+        try:
+            return self.plgx.recv(8192).rstrip()
+        except:
+            return b"Its dead Jim"
+        
+    def makeTalk(self):
+        """
+        Directs instrument at current address to send out response
+        """
+        self.plgx.send(b"++read eoi\n")
         
 
 
 
 
-    def instrument(self, addr:int, terminator:bytes=EOI):
+    def asciiInstrument(self, addr:int, Auto, term):
         """
-        Generator function for Instrument objects. Takes the same arguments as 
+        Generator function for asciiInstrument objects. Takes the same arguments as 
         Instrument class
 
         addr:int Address of GPIB device to access
-        terminator
+        Auto:bool address instrument to talk immediately after writing. 
+        terminator: EOI by default, we can add ascii terminators later if we need. 
         """
-        return Instrument(self, addr, terminator)
+        return asciiInstrument(self, addr, auto=Auto, terminator=term)
 
 
-class Instrument():
+class asciiInstrument():
 
     def __init__(self, controller:prologixEthernet, addr:int, auto:bool=True, terminator:bytes = EOI):
         """
@@ -187,9 +200,39 @@ class Instrument():
         self.IDN = 3
         self.auto = auto
     
-    def _ControlBus(self):
-        if self.bus._auto != self.auto:
+    def _ControlBus(self, auto:bool=True):
+        if (self.bus._auto != self.auto) and auto:
             self.bus.readafterwrite = self.auto
         
         if self.bus.addr != self.address:
             self.bus.address = self.address
+
+
+    def read(self, flush=True):
+        """
+        Read data from instrument. Directs instrument to talk and returns bytes object of response
+        If the buffer needs to be cleared before reading preface with another read command
+        """
+        self._ControlBus()
+        if not self.auto:
+            self.bus.makeTalk()
+        return self.bus.readascii()
+    
+    def write(self, command):
+        """
+        Writes data to instrument, will not read return. 
+        """
+        self._ControlBus()
+        self.bus.writeascii(command)
+
+
+    def ask(self, command:str, delay=.1):
+        """
+        Send command to instrument and read response after delay
+
+        delay:float Seconds to wait after sending command to read
+        """
+        self.write(command)
+        sleep(delay)
+        return self.read()
+        
