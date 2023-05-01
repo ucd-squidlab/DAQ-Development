@@ -50,6 +50,9 @@ class prologixEthernet:
         address = (ipaddr, port)
         # Open the socket!
         self.plgx.connect(address)
+        self._auto = True
+        self.addr = 0
+        
 
 
 
@@ -102,6 +105,8 @@ class prologixEthernet:
         else:
             return mac
 """
+
+
     @property
     def address(self):
         """
@@ -115,7 +120,7 @@ class prologixEthernet:
         Sets the GPIB address of the bus
         """
         self.addr = new_addr
-        self.write(f"++addr {new_addr}")
+        self.writeascii(f"++addr {new_addr}", escape=False)
 
     @property
     def readafterwrite(self):
@@ -127,13 +132,15 @@ class prologixEthernet:
 
     @readafterwrite.setter
     def readafterwrite(self, RAW):
+        ""
         self._auto = bool(RAW)
-        self.write(f"++auto {int(self._auto)}", escape=False)
+        self.writeascii(f"++auto {int(self._auto)}", escape=False)
 
 
     def writeascii(self, command:str, escape=True):
         """
-        Write command string to Plgx controller. If the command contains character of +, \\n, or ESC (\\)
+        Write command string to Plgx controller. If the command contains character of +, \\n, \\r, or ESC (ASCII 27))
+        escape will add ESC characters before it so that they aren't interpreted by the controller
         """
         # Make it into an ascii string stored as a bytearray
         command = command.encode(encoding='ascii')
@@ -148,6 +155,7 @@ class prologixEthernet:
             command = re.sub(rb"(\x0D)", rb"\x1B\1", command)
             command = re.sub(rb"(\x2B)", rb"\x1B\1", command)
         #print(command.hex())
+        #append newline to command as ethernet terminator
         command = command + b'\x0A'
         self.plgx.send(command)
 
@@ -160,6 +168,10 @@ class prologixEthernet:
             return self.plgx.recv(8192).rstrip()
         except:
             return b"Its dead Jim"
+    
+    def ask(self,command):
+        self.writeascii(command, escape=False)
+        return self.readascii()
         
     def makeTalk(self):
         """
@@ -171,7 +183,7 @@ class prologixEthernet:
 
 
 
-    def asciiInstrument(self, addr:int, Auto, term):
+    def asciiInstrument(self, addr:int, Auto=None, term=None):
         """
         Generator function for asciiInstrument objects. Takes the same arguments as 
         Instrument class
@@ -201,6 +213,9 @@ class asciiInstrument():
         self.auto = auto
     
     def _ControlBus(self, auto:bool=True):
+        """
+        Asserts instrumrnt specific settings onto the bus
+        """
         if (self.bus._auto != self.auto) and auto:
             self.bus.readafterwrite = self.auto
         
@@ -208,7 +223,7 @@ class asciiInstrument():
             self.bus.address = self.address
 
 
-    def read(self, flush=True):
+    def read(self):
         """
         Read data from instrument. Directs instrument to talk and returns bytes object of response
         If the buffer needs to be cleared before reading preface with another read command
@@ -218,7 +233,7 @@ class asciiInstrument():
             self.bus.makeTalk()
         return self.bus.readascii()
     
-    def write(self, command):
+    def write(self, command:str):
         """
         Writes data to instrument, will not read return. 
         """
@@ -226,7 +241,7 @@ class asciiInstrument():
         self.bus.writeascii(command)
 
 
-    def ask(self, command:str, delay=.1):
+    def ask(self, command:str, delay:float=0):
         """
         Send command to instrument and read response after delay
 
