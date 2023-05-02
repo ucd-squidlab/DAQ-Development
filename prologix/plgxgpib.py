@@ -28,7 +28,7 @@ class prologixEthernet:
     PLGX_MAC =  0x2169  # First three octets of 
     ESC = b"0x27"   #ASCII escape character used to escape values in 
 
-    def __init__(self, ipaddr:str, port:int=1234, timeout:float=5):
+    def __init__(self, ipaddr:str, port:int=1234, timeout:float=5, lag=.2):
         """ 
         Create object to connect to the Prologix GPIB/Enet controller.
 
@@ -45,13 +45,17 @@ class prologixEthernet:
         # Creates the web socket, uses IPV4 and TCP protocol
         self.plgx = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
         self.plgx.settimeout(timeout)
-
+        self.lag=lag
         #Touple of ip address and port
         address = (ipaddr, port)
         # Open the socket!
         self.plgx.connect(address)
-        self._auto = True
-        self.addr = 0
+        self.readafterwrite=True
+        self.address = 0
+        self.writeascii("++eoi 1", escape=False)
+        self.writeascii("++eos 3", escape=False)
+        self.writeascii("++eot_enable 0", escape=False)
+        self.writeascii("++ifc", escape=False)
         
 
 
@@ -157,7 +161,10 @@ class prologixEthernet:
         #print(command.hex())
         #append newline to command as ethernet terminator
         command = command + b'\x0A'
+        print(command)
         self.plgx.send(command)
+        sleep(self.lag)
+    
 
     def readascii(self):
         """
@@ -167,7 +174,7 @@ class prologixEthernet:
         try:
             return self.plgx.recv(8192).rstrip()
         except:
-            return b"Its dead Jim"
+            return None
     
     def ask(self,command):
         self.writeascii(command, escape=False)
@@ -183,7 +190,7 @@ class prologixEthernet:
 
 
 
-    def asciiInstrument(self, addr:int, Auto=None, term=None):
+    def asciiInstrument(self, addr:int, Auto=True, term=EOI):
         """
         Generator function for asciiInstrument objects. Takes the same arguments as 
         Instrument class
@@ -212,15 +219,17 @@ class asciiInstrument():
         self.IDN = 3
         self.auto = auto
     
-    def _ControlBus(self, auto:bool=True):
+    def _ControlBus(self):
         """
         Asserts instrumrnt specific settings onto the bus
         """
-        if (self.bus._auto != self.auto) and auto:
+        if self.bus._auto != self.auto:
             self.bus.readafterwrite = self.auto
+            print("auto:", self.bus._auto, self.auto)
         
         if self.bus.addr != self.address:
             self.bus.address = self.address
+            print("addr:", self.bus.addr, self.address)
 
 
     def read(self):
@@ -241,7 +250,7 @@ class asciiInstrument():
         self.bus.writeascii(command)
 
 
-    def ask(self, command:str, delay:float=0):
+    def ask(self, command:str, delay:float=.5, multi:int = None):
         """
         Send command to instrument and read response after delay
 
@@ -249,5 +258,14 @@ class asciiInstrument():
         """
         self.write(command)
         sleep(delay)
+        if multi:
+            res=b''
+            for i in range(multi):
+                a = self.read()
+                if a is not None:
+                    res = res+b'\n'+a
+                else:
+                    break
+            return res
         return self.read()
         
